@@ -437,7 +437,7 @@
           <span class="pill" id="durationSummary">Duration 0.0 s</span>
           <span class="pill" id="radiusSummary">Radius 0.0 NM</span>
           <span class="pill" id="completionSpacingSummary">Post-turn spacing 0.0 NM</span>
-          <span class="pill" id="equalSpacingSummary">Equal spacing turn 0.0 s after A1 first</span>
+          <span class="pill" id="equalSpacingSummary">Optimum wait 0.0 s after each first</span>
         </div>
       </div>
       <div class="time-card" aria-live="polite">
@@ -506,7 +506,7 @@
 
         <div class="control-group" id="fixedWaitGroup">
           <div class="control-heading">
-            <label for="fixedWait">Fixed wait</label>
+            <label for="fixedWait">Wait after each first turn</label>
             <output id="fixedWaitValue" for="fixedWait">3.0 s</output>
           </div>
           <input id="fixedWait" type="range" min="0" max="20" step="0.5" value="3">
@@ -721,20 +721,19 @@
       };
     }
 
-    function solveEqualSpacingTrigger(firstCompleteTime, spacingAtTrigger, targetSpacing, searchDuration) {
+    function solveEqualSpacingDelay(spacingAtDelay, targetSpacing, searchDuration) {
       const tolerance = 0.001;
-      let previousTime = firstCompleteTime;
-      let previousResult = spacingAtTrigger(previousTime);
+      let previousDelay = 0;
+      let previousResult = spacingAtDelay(previousDelay);
       let previousDiff = previousResult.completionSpacing - targetSpacing;
-      let nearestTime = previousTime;
+      let nearestDelay = previousDelay;
       let nearestResult = previousResult;
       let nearestDiff = previousDiff;
 
       if (Math.abs(previousDiff) <= tolerance) {
         return {
           available: true,
-          triggerTime: previousTime,
-          waitAfterFirstComplete: 0,
+          delayAfterFirstComplete: previousDelay,
           result: previousResult
         };
       }
@@ -742,12 +741,12 @@
       let bracket = null;
       const steps = 260;
       for (let index = 1; index <= steps; index += 1) {
-        const time = firstCompleteTime + (searchDuration * index) / steps;
-        const result = spacingAtTrigger(time);
+        const delay = (searchDuration * index) / steps;
+        const result = spacingAtDelay(delay);
         const diff = result.completionSpacing - targetSpacing;
 
         if (Math.abs(diff) < Math.abs(nearestDiff)) {
-          nearestTime = time;
+          nearestDelay = delay;
           nearestResult = result;
           nearestDiff = diff;
         }
@@ -755,23 +754,22 @@
         if (Math.abs(diff) <= tolerance) {
           return {
             available: true,
-            triggerTime: time,
-            waitAfterFirstComplete: time - firstCompleteTime,
+            delayAfterFirstComplete: delay,
             result
           };
         }
 
         if ((previousDiff < 0 && diff > 0) || (previousDiff > 0 && diff < 0)) {
           bracket = {
-            lowTime: previousTime,
-            highTime: time,
+            lowDelay: previousDelay,
+            highDelay: delay,
             lowDiff: previousDiff,
             highDiff: diff
           };
           break;
         }
 
-        previousTime = time;
+        previousDelay = delay;
         previousResult = result;
         previousDiff = diff;
       }
@@ -779,44 +777,42 @@
       if (!bracket) {
         return {
           available: false,
-          triggerTime: nearestTime,
-          waitAfterFirstComplete: nearestTime - firstCompleteTime,
+          delayAfterFirstComplete: nearestDelay,
           result: nearestResult,
           nearest: nearestResult,
-          nearestTime,
+          nearestDelay,
           nearestDiff
         };
       }
 
-      let lowTime = bracket.lowTime;
-      let highTime = bracket.highTime;
+      let lowDelay = bracket.lowDelay;
+      let highDelay = bracket.highDelay;
       let lowDiff = bracket.lowDiff;
       let bestResult = null;
-      let bestTime = lowTime;
+      let bestDelay = lowDelay;
 
       for (let index = 0; index < 42; index += 1) {
-        const midTime = (lowTime + highTime) / 2;
-        const midResult = spacingAtTrigger(midTime);
+        const midDelay = (lowDelay + highDelay) / 2;
+        const midResult = spacingAtDelay(midDelay);
         const midDiff = midResult.completionSpacing - targetSpacing;
         bestResult = midResult;
-        bestTime = midTime;
+        bestDelay = midDelay;
 
         if (Math.abs(midDiff) <= tolerance) {
           break;
         }
 
         if ((lowDiff < 0 && midDiff > 0) || (lowDiff > 0 && midDiff < 0)) {
-          highTime = midTime;
+          highDelay = midDelay;
         } else {
-          lowTime = midTime;
+          lowDelay = midDelay;
           lowDiff = midDiff;
         }
       }
 
       return {
         available: true,
-        triggerTime: bestTime,
-        waitAfterFirstComplete: bestTime - firstCompleteTime,
+        delayAfterFirstComplete: bestDelay,
         result: bestResult
       };
     }
@@ -833,17 +829,17 @@
       const a2First = makeArc(0, a2Start, startHeading, -settings.sign, a2FirstAngle, radius, settings.speedNmPerSec);
       const a2AtA1First = stateAt([a2First, makeLine(a2First.endTime, a2First.endPoint, a2First.endHeading, a1First.endTime - a2First.endTime, settings.speedNmPerSec)], a1First.endTime, settings.speedNmPerSec);
 
-      function makeTriggeredRoute(triggerTime) {
+      function makeTriggeredRoute(a1TriggerTime, a2TriggerTime = a1TriggerTime) {
         const a1Segments = [a1First];
-        appendLine(a1Segments, a1First.endTime, triggerTime, settings.speedNmPerSec);
-        const a1AtTrigger = stateAt(a1Segments, triggerTime, settings.speedNmPerSec);
-        const a1Second = makeArc(triggerTime, a1AtTrigger.point, a1AtTrigger.heading, -settings.sign, ASSIST_RAD, radius, settings.speedNmPerSec);
+        appendLine(a1Segments, a1First.endTime, a1TriggerTime, settings.speedNmPerSec);
+        const a1AtTrigger = stateAt(a1Segments, a1TriggerTime, settings.speedNmPerSec);
+        const a1Second = makeArc(a1TriggerTime, a1AtTrigger.point, a1AtTrigger.heading, -settings.sign, ASSIST_RAD, radius, settings.speedNmPerSec);
         a1Segments.push(a1Second);
 
         const a2Segments = [a2First];
-        appendLine(a2Segments, a2First.endTime, triggerTime, settings.speedNmPerSec);
-        const a2AtTrigger = stateAt(a2Segments, triggerTime, settings.speedNmPerSec);
-        const a2Second = makeArc(triggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad + ASSIST_RAD, radius, settings.speedNmPerSec);
+        appendLine(a2Segments, a2First.endTime, a2TriggerTime, settings.speedNmPerSec);
+        const a2AtTrigger = stateAt(a2Segments, a2TriggerTime, settings.speedNmPerSec);
+        const a2Second = makeArc(a2TriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad + ASSIST_RAD, radius, settings.speedNmPerSec);
         a2Segments.push(a2Second);
 
         const maneuverEnd = Math.max(a1Second.endTime, a2Second.endTime);
@@ -861,32 +857,39 @@
           completionA1,
           completionA2,
           completionSpacing,
+          a1TriggerTime,
+          a2TriggerTime,
           triggerA1: a1AtTrigger.point,
           triggerA2: a2AtTrigger.point
         };
       }
 
-      const equalSpacing = solveEqualSpacingTrigger(
-        a1First.endTime,
-        makeTriggeredRoute,
+      const equalSpacing = solveEqualSpacingDelay(
+        (delay) => makeTriggeredRoute(a1First.endTime + delay, a2First.endTime + delay),
         settings.separation,
         Math.max(30, a1First.duration * 8)
       );
-      let triggerTime = a1First.endTime + settings.fixedWait;
+      let a1TriggerTime = a1First.endTime + settings.fixedWait;
+      let a2TriggerTime = a1TriggerTime;
       let crossing = null;
 
       if (settings.mode === "cross") {
         crossing = solveLineIntersection(a1First.endPoint, a1First.endHeading, a2AtA1First.point, a2AtA1First.heading);
         if (crossing && crossing.a1Distance >= 0) {
-          triggerTime = a1First.endTime + crossing.a1Distance / settings.speedNmPerSec;
+          a1TriggerTime = a1First.endTime + crossing.a1Distance / settings.speedNmPerSec;
         } else {
-          triggerTime = a1First.endTime;
+          a1TriggerTime = a1First.endTime;
         }
+        a2TriggerTime = a1TriggerTime;
+      } else if (settings.mode === "fixed") {
+        a1TriggerTime = a1First.endTime + settings.fixedWait;
+        a2TriggerTime = a2First.endTime + settings.fixedWait;
       } else if (settings.mode === "optimum") {
-        triggerTime = equalSpacing.triggerTime;
+        a1TriggerTime = a1First.endTime + equalSpacing.delayAfterFirstComplete;
+        a2TriggerTime = a2First.endTime + equalSpacing.delayAfterFirstComplete;
       }
 
-      const selectedRoute = makeTriggeredRoute(triggerTime);
+      const selectedRoute = makeTriggeredRoute(a1TriggerTime, a2TriggerTime);
 
       const a1Segments = selectedRoute.a1Segments;
       const a2Segments = selectedRoute.a2Segments;
@@ -906,8 +909,11 @@
         a2Segments,
         a1Start,
         a2Start,
-        triggerTime,
+        a1TriggerTime: selectedRoute.a1TriggerTime,
+        a2TriggerTime: selectedRoute.a2TriggerTime,
         firstTurnCompleteTime: a1First.endTime,
+        a1FirstTurnCompleteTime: a1First.endTime,
+        a2FirstTurnCompleteTime: a2First.endTime,
         totalTime,
         maneuverEnd,
         completionA1: selectedRoute.completionA1,
@@ -1118,25 +1124,32 @@
     }
 
     function drawTriggerMarkers(transform) {
-      const a1 = stateAt(route.a1Segments, route.triggerTime, params.speedNmPerSec);
-      const a2 = stateAt(route.a2Segments, route.triggerTime, params.speedNmPerSec);
+      const a1 = stateAt(route.a1Segments, route.a1TriggerTime, params.speedNmPerSec);
+      const a2 = stateAt(route.a2Segments, route.a2TriggerTime, params.speedNmPerSec);
+      const sameTrigger = Math.abs(route.a1TriggerTime - route.a2TriggerTime) < 0.05;
       ctx.save();
       ctx.lineWidth = 1.5;
       ctx.setLineDash([5, 5]);
       ctx.strokeStyle = "#8b817a";
-      [a1.point, a2.point].forEach((point) => {
+      [
+        { point: a1.point, label: sameTrigger ? "Trigger" : "A1 trigger" },
+        { point: a2.point, label: sameTrigger ? "" : "A2 trigger" }
+      ].forEach((item) => {
+        const point = item.point;
         const p = transform.toScreen(point);
         ctx.beginPath();
         ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
         ctx.stroke();
+        if (item.label) {
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#645c57";
+          ctx.font = "700 12px Inter, system-ui, sans-serif";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "bottom";
+          ctx.fillText(item.label, p.x + 10, p.y - 8);
+          ctx.setLineDash([5, 5]);
+        }
       });
-      ctx.setLineDash([]);
-      ctx.fillStyle = "#645c57";
-      ctx.font = "700 12px Inter, system-ui, sans-serif";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "bottom";
-      const label = transform.toScreen(a1.point);
-      ctx.fillText("Trigger", label.x + 10, label.y - 8);
       ctx.restore();
     }
 
@@ -1195,22 +1208,22 @@
         y: (p1.y + p2.y) / 2
       };
       const waitLabel = route.equalSpacing.available
-        ? `Turn here +${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`
-        : `Closest +${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`;
+        ? `Optimum +${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`
+        : `Closest +${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`;
 
       ctx.save();
       ctx.strokeStyle = "#2e6f58";
       ctx.fillStyle = "#ffffff";
       ctx.lineWidth = 2;
-      ctx.setLineDash([8, 6]);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
 
       drawDiamond(p1.x, p1.y, 8);
       drawDiamond(p2.x, p2.y, 8);
+      ctx.fillStyle = "#2e6f58";
+      ctx.font = "800 11px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("A1", p1.x, p1.y - 12);
+      ctx.fillText("A2", p2.x, p2.y - 12);
 
       ctx.font = "800 12px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
@@ -1354,13 +1367,15 @@
       elements.timeSlider.value = elapsed.toFixed(1);
       elements.timeReadout.value = `${elapsed.toFixed(1)} / ${route.totalTime.toFixed(1)} s`;
       elements.elapsedLarge.textContent = formatSeconds(elapsed);
-      elements.triggerSummary.textContent = `Trigger ${route.triggerTime.toFixed(1)} s`;
+      elements.triggerSummary.textContent = Math.abs(route.a1TriggerTime - route.a2TriggerTime) < 0.05
+        ? `Trigger ${route.a1TriggerTime.toFixed(1)} s`
+        : `Trigger A1 ${route.a1TriggerTime.toFixed(1)} s / A2 ${route.a2TriggerTime.toFixed(1)} s`;
       elements.durationSummary.textContent = `Duration ${route.totalTime.toFixed(1)} s`;
       elements.radiusSummary.textContent = `Radius ${route.radius.toFixed(2)} NM`;
       elements.completionSpacingSummary.textContent = `Post-turn spacing ${formatNm(route.completionSpacing)}`;
       elements.equalSpacingSummary.textContent = route.equalSpacing.available
-        ? `Optimum turn ${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`
-        : `Closest spacing turn ${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`;
+        ? `Optimum wait ${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`
+        : `Closest wait ${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`;
       const fixed = params.mode === "fixed";
       elements.fixedWait.disabled = !fixed;
       elements.fixedWaitGroup.classList.toggle("disabled", !fixed);
