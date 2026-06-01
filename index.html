@@ -1,0 +1,1456 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Double Assisted Tactical Turn</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f6;
+      --panel: #ffffff;
+      --ink: #18211f;
+      --muted: #596460;
+      --line: #d8dfdc;
+      --soft: #edf1ef;
+      --a1: #d95f43;
+      --a1-soft: rgba(217, 95, 67, 0.32);
+      --a2: #1f7a8c;
+      --a2-soft: rgba(31, 122, 140, 0.32);
+      --focus: #2e6f58;
+      --shadow: 0 18px 45px rgba(35, 47, 44, 0.13);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1440px, 100%);
+      height: 100dvh;
+      min-height: 0;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.2rem, 2vw, 1.8rem);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      white-space: nowrap;
+    }
+
+    .time-card {
+      min-width: 172px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 8px 24px rgba(35, 47, 44, 0.08);
+      text-align: right;
+    }
+
+    .time-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .time-card strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 1.65rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(250px, 310px) 1fr;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    .controls {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      align-self: stretch;
+      overflow: auto;
+    }
+
+    .control-group {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--soft);
+    }
+
+    .control-group:first-child {
+      padding-top: 0;
+    }
+
+    .control-group:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .control-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    output {
+      color: var(--muted);
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--focus);
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+    }
+
+    .segmented input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .segmented span {
+      display: grid;
+      place-items: center;
+      min-height: 34px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .segmented input:checked + span {
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: 0 2px 8px rgba(35, 47, 44, 0.1);
+    }
+
+    .mode {
+      grid-template-columns: 1fr;
+    }
+
+    .mode span {
+      justify-content: start;
+      place-items: center start;
+      padding-left: 12px;
+    }
+
+    .disabled {
+      opacity: 0.45;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 38px;
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-row input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--focus);
+      flex: 0 0 auto;
+    }
+
+    .stage {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fbfcfb;
+      box-shadow: var(--shadow);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .legend {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 5px 9px;
+      border: 1px solid rgba(216, 223, 220, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      backdrop-filter: blur(8px);
+    }
+
+    .swatch {
+      width: 22px;
+      height: 4px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .legend-item:first-child {
+      color: var(--a1);
+    }
+
+    .legend-item:nth-child(2) {
+      color: var(--a2);
+    }
+
+    .scrubber {
+      display: grid;
+      grid-template-columns: 44px 1fr minmax(142px, auto);
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 10px 26px rgba(35, 47, 44, 0.1);
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+      color: var(--ink);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .icon-button:focus-visible,
+    .segmented span:focus-visible,
+    input:focus-visible {
+      outline: 3px solid rgba(46, 111, 88, 0.28);
+      outline-offset: 2px;
+    }
+
+    .play-symbol,
+    .pause-symbol {
+      display: block;
+      width: 18px;
+      height: 18px;
+      position: relative;
+    }
+
+    .play-symbol::before {
+      content: "";
+      position: absolute;
+      inset: 2px 1px 2px 4px;
+      border-left: 13px solid var(--ink);
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+    }
+
+    .pause-symbol::before,
+    .pause-symbol::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+      width: 5px;
+      background: var(--ink);
+      border-radius: 2px;
+    }
+
+    .pause-symbol::before {
+      left: 3px;
+    }
+
+    .pause-symbol::after {
+      right: 3px;
+    }
+
+    .time-readout {
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        padding: 14px;
+      }
+
+      .topbar,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        display: grid;
+      }
+
+      .time-card {
+        width: 100%;
+        text-align: left;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-rows: minmax(260px, 1fr) minmax(150px, auto);
+      }
+
+      .controls {
+        order: 2;
+        max-height: 34vh;
+      }
+
+      .stage {
+        min-height: 0;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 10px;
+      }
+
+      .stage {
+        min-height: 0;
+      }
+
+      .scrubber {
+        grid-template-columns: 42px 1fr;
+      }
+
+      .time-readout {
+        grid-column: 1 / -1;
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Double Assisted Tactical Turn</h1>
+        <div class="meta" aria-live="polite">
+          <span class="pill" id="triggerSummary">Trigger 0.0 s</span>
+          <span class="pill" id="durationSummary">Duration 0.0 s</span>
+          <span class="pill" id="radiusSummary">Radius 0.0 NM</span>
+          <span class="pill" id="completionSpacingSummary">Post-turn spacing 0.0 NM</span>
+          <span class="pill" id="equalSpacingSummary">Equal spacing turn 0.0 s after A1 first</span>
+        </div>
+      </div>
+      <div class="time-card" aria-live="polite">
+        <span>Elapsed</span>
+        <strong id="elapsedLarge">0.0 s</strong>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <aside class="controls" aria-label="Maneuver controls">
+        <div class="control-group">
+          <div class="control-heading">
+            <label for="turnAngle">Turn angle</label>
+            <output id="turnAngleValue" for="turnAngle">45 deg</output>
+          </div>
+          <input id="turnAngle" type="range" min="20" max="70" step="1" value="45">
+        </div>
+
+        <div class="control-group">
+          <div class="control-heading">Direction</div>
+          <div class="segmented" role="radiogroup" aria-label="Turn direction">
+            <label>
+              <input type="radio" name="direction" value="left" checked>
+              <span tabindex="0">Left</span>
+            </label>
+            <label>
+              <input type="radio" name="direction" value="right">
+              <span tabindex="0">Right</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-heading">
+            <label for="separation">Separation</label>
+            <output id="separationValue" for="separation">1.0 NM</output>
+          </div>
+          <input id="separation" type="range" min="0.5" max="5" step="0.1" value="1">
+        </div>
+
+        <div class="control-group">
+          <div class="control-heading">
+            <label for="speed">Contract speed</label>
+            <output id="speedValue" for="speed">420 kt</output>
+          </div>
+          <input id="speed" type="range" min="180" max="600" step="10" value="420">
+        </div>
+
+        <div class="control-group">
+          <div class="control-heading">Second turn</div>
+          <div class="segmented mode" role="radiogroup" aria-label="Second turn trigger">
+            <label>
+              <input type="radio" name="mode" value="cross" checked>
+              <span tabindex="0">At crossing</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="fixed">
+              <span tabindex="0">Fixed wait</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="optimum">
+              <span tabindex="0">Optimum</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="control-group" id="fixedWaitGroup">
+          <div class="control-heading">
+            <label for="fixedWait">Fixed wait</label>
+            <output id="fixedWaitValue" for="fixedWait">3.0 s</output>
+          </div>
+          <input id="fixedWait" type="range" min="0" max="20" step="0.5" value="3">
+        </div>
+
+        <div class="control-group">
+          <label class="toggle-row" for="showOptimum">
+            <span>Show optimum position</span>
+            <input id="showOptimum" type="checkbox" checked>
+          </label>
+        </div>
+      </aside>
+
+      <div class="stage" id="stage">
+        <canvas id="plot" aria-label="Animated tactical turn plot"></canvas>
+        <div class="legend" aria-hidden="true">
+          <span class="legend-item"><span class="swatch"></span>A1 outside</span>
+          <span class="legend-item"><span class="swatch"></span>A2 inside</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="scrubber">
+      <button class="icon-button" type="button" id="playPause" aria-label="Play" title="Play">
+        <span class="play-symbol" aria-hidden="true"></span>
+      </button>
+      <input id="timeSlider" type="range" min="0" max="1" step="0.1" value="0" aria-label="Elapsed time in seconds">
+      <output class="time-readout" id="timeReadout" for="timeSlider">0.0 / 0.0 s</output>
+    </footer>
+  </main>
+
+  <script>
+    const ASSIST_DEG = 20;
+    const ASSIST_RAD = radians(ASSIST_DEG);
+    const TURN_RADIUS_FACTOR = 0.7;
+    const FINAL_LEAD_SECONDS = 8;
+
+    const elements = {
+      stage: document.getElementById("stage"),
+      canvas: document.getElementById("plot"),
+      turnAngle: document.getElementById("turnAngle"),
+      turnAngleValue: document.getElementById("turnAngleValue"),
+      separation: document.getElementById("separation"),
+      separationValue: document.getElementById("separationValue"),
+      speed: document.getElementById("speed"),
+      speedValue: document.getElementById("speedValue"),
+      fixedWait: document.getElementById("fixedWait"),
+      fixedWaitValue: document.getElementById("fixedWaitValue"),
+      fixedWaitGroup: document.getElementById("fixedWaitGroup"),
+      showOptimum: document.getElementById("showOptimum"),
+      timeSlider: document.getElementById("timeSlider"),
+      timeReadout: document.getElementById("timeReadout"),
+      elapsedLarge: document.getElementById("elapsedLarge"),
+      triggerSummary: document.getElementById("triggerSummary"),
+      durationSummary: document.getElementById("durationSummary"),
+      radiusSummary: document.getElementById("radiusSummary"),
+      completionSpacingSummary: document.getElementById("completionSpacingSummary"),
+      equalSpacingSummary: document.getElementById("equalSpacingSummary"),
+      playPause: document.getElementById("playPause")
+    };
+
+    const ctx = elements.canvas.getContext("2d");
+    let params = readParams();
+    let route = buildRoute(params);
+    let elapsed = 0;
+    let playing = false;
+    let lastFrameTime = 0;
+    let viewport = { width: 1, height: 1, dpr: 1 };
+
+    function radians(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function degrees(rad) {
+      return (rad * 180) / Math.PI;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function add(a, b) {
+      return { x: a.x + b.x, y: a.y + b.y };
+    }
+
+    function sub(a, b) {
+      return { x: a.x - b.x, y: a.y - b.y };
+    }
+
+    function scale(v, amount) {
+      return { x: v.x * amount, y: v.y * amount };
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function forward(heading) {
+      return { x: Math.cos(heading), y: Math.sin(heading) };
+    }
+
+    function leftNormal(heading) {
+      return { x: -Math.sin(heading), y: Math.cos(heading) };
+    }
+
+    function formatSeconds(value) {
+      return `${value.toFixed(1)} s`;
+    }
+
+    function formatNm(value) {
+      return `${value.toFixed(1)} NM`;
+    }
+
+    function readParams() {
+      const directionInput = document.querySelector("input[name='direction']:checked");
+      const modeInput = document.querySelector("input[name='mode']:checked");
+      return {
+        angleDeg: Number(elements.turnAngle.value),
+        angleRad: radians(Number(elements.turnAngle.value)),
+        direction: directionInput ? directionInput.value : "left",
+        sign: directionInput && directionInput.value === "right" ? -1 : 1,
+        separation: Number(elements.separation.value),
+        speedKts: Number(elements.speed.value),
+        speedNmPerSec: Number(elements.speed.value) / 3600,
+        mode: modeInput ? modeInput.value : "cross",
+        fixedWait: Number(elements.fixedWait.value),
+        showOptimum: elements.showOptimum.checked
+      };
+    }
+
+    function makeArc(startTime, startPoint, startHeading, turnSign, angle, radius, speed) {
+      const duration = (radius * angle) / speed;
+      const center = add(startPoint, scale(leftNormal(startHeading), turnSign * radius));
+      const endHeading = startHeading + turnSign * angle;
+      const endPoint = sub(center, scale(leftNormal(endHeading), turnSign * radius));
+      return {
+        type: "arc",
+        startTime,
+        endTime: startTime + duration,
+        duration,
+        startPoint,
+        startHeading,
+        turnSign,
+        angle,
+        radius,
+        center,
+        endPoint,
+        endHeading
+      };
+    }
+
+    function makeLine(startTime, startPoint, heading, duration, speed) {
+      const safeDuration = Math.max(0, duration);
+      const endPoint = add(startPoint, scale(forward(heading), speed * safeDuration));
+      return {
+        type: "line",
+        startTime,
+        endTime: startTime + safeDuration,
+        duration: safeDuration,
+        startPoint,
+        heading,
+        endPoint,
+        endHeading: heading
+      };
+    }
+
+    function stateOnSegment(segment, time, speed) {
+      const local = clamp(time - segment.startTime, 0, segment.duration);
+      if (segment.type === "line") {
+        return {
+          point: add(segment.startPoint, scale(forward(segment.heading), speed * local)),
+          heading: segment.heading
+        };
+      }
+
+      const swept = segment.radius > 0 ? (speed * local) / segment.radius : 0;
+      const heading = segment.startHeading + segment.turnSign * swept;
+      return {
+        point: sub(segment.center, scale(leftNormal(heading), segment.turnSign * segment.radius)),
+        heading
+      };
+    }
+
+    function stateAt(segments, time, speed) {
+      const segment = segments.find((item) => time <= item.endTime + 0.0001) || segments[segments.length - 1];
+      return stateOnSegment(segment, time, speed);
+    }
+
+    function appendLine(segments, startTime, endTime, speed) {
+      const last = segments[segments.length - 1];
+      if (endTime <= startTime + 0.0001) {
+        return;
+      }
+      segments.push(makeLine(startTime, last.endPoint, last.endHeading, endTime - startTime, speed));
+    }
+
+    function solveLineIntersection(p1, h1, p2, h2) {
+      const v1 = forward(h1);
+      const v2 = forward(h2);
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const det = (v2.x * v1.y) - (v1.x * v2.y);
+      if (Math.abs(det) < 0.000001) {
+        return null;
+      }
+      const s1 = ((v2.x * dy) - (v2.y * dx)) / det;
+      const s2 = ((v1.x * dy) - (v1.y * dx)) / det;
+      return {
+        a1Distance: s1,
+        a2Distance: s2,
+        point: add(p1, scale(v1, s1))
+      };
+    }
+
+    function solveEqualSpacingTrigger(firstCompleteTime, spacingAtTrigger, targetSpacing, searchDuration) {
+      const tolerance = 0.001;
+      let previousTime = firstCompleteTime;
+      let previousResult = spacingAtTrigger(previousTime);
+      let previousDiff = previousResult.completionSpacing - targetSpacing;
+      let nearestTime = previousTime;
+      let nearestResult = previousResult;
+      let nearestDiff = previousDiff;
+
+      if (Math.abs(previousDiff) <= tolerance) {
+        return {
+          available: true,
+          triggerTime: previousTime,
+          waitAfterFirstComplete: 0,
+          result: previousResult
+        };
+      }
+
+      let bracket = null;
+      const steps = 260;
+      for (let index = 1; index <= steps; index += 1) {
+        const time = firstCompleteTime + (searchDuration * index) / steps;
+        const result = spacingAtTrigger(time);
+        const diff = result.completionSpacing - targetSpacing;
+
+        if (Math.abs(diff) < Math.abs(nearestDiff)) {
+          nearestTime = time;
+          nearestResult = result;
+          nearestDiff = diff;
+        }
+
+        if (Math.abs(diff) <= tolerance) {
+          return {
+            available: true,
+            triggerTime: time,
+            waitAfterFirstComplete: time - firstCompleteTime,
+            result
+          };
+        }
+
+        if ((previousDiff < 0 && diff > 0) || (previousDiff > 0 && diff < 0)) {
+          bracket = {
+            lowTime: previousTime,
+            highTime: time,
+            lowDiff: previousDiff,
+            highDiff: diff
+          };
+          break;
+        }
+
+        previousTime = time;
+        previousResult = result;
+        previousDiff = diff;
+      }
+
+      if (!bracket) {
+        return {
+          available: false,
+          triggerTime: nearestTime,
+          waitAfterFirstComplete: nearestTime - firstCompleteTime,
+          result: nearestResult,
+          nearest: nearestResult,
+          nearestTime,
+          nearestDiff
+        };
+      }
+
+      let lowTime = bracket.lowTime;
+      let highTime = bracket.highTime;
+      let lowDiff = bracket.lowDiff;
+      let bestResult = null;
+      let bestTime = lowTime;
+
+      for (let index = 0; index < 42; index += 1) {
+        const midTime = (lowTime + highTime) / 2;
+        const midResult = spacingAtTrigger(midTime);
+        const midDiff = midResult.completionSpacing - targetSpacing;
+        bestResult = midResult;
+        bestTime = midTime;
+
+        if (Math.abs(midDiff) <= tolerance) {
+          break;
+        }
+
+        if ((lowDiff < 0 && midDiff > 0) || (lowDiff > 0 && midDiff < 0)) {
+          highTime = midTime;
+        } else {
+          lowTime = midTime;
+          lowDiff = midDiff;
+        }
+      }
+
+      return {
+        available: true,
+        triggerTime: bestTime,
+        waitAfterFirstComplete: bestTime - firstCompleteTime,
+        result: bestResult
+      };
+    }
+
+    function buildRoute(settings) {
+      const radius = Math.max(0.08, settings.separation * TURN_RADIUS_FACTOR);
+      const startHeading = 0;
+      const a1Start = { x: 0, y: -settings.sign * settings.separation / 2 };
+      const a2Start = { x: 0, y: settings.sign * settings.separation / 2 };
+      const a1FirstAngle = settings.angleRad + ASSIST_RAD;
+      const a2FirstAngle = ASSIST_RAD;
+
+      const a1First = makeArc(0, a1Start, startHeading, settings.sign, a1FirstAngle, radius, settings.speedNmPerSec);
+      const a2First = makeArc(0, a2Start, startHeading, -settings.sign, a2FirstAngle, radius, settings.speedNmPerSec);
+      const a2AtA1First = stateAt([a2First, makeLine(a2First.endTime, a2First.endPoint, a2First.endHeading, a1First.endTime - a2First.endTime, settings.speedNmPerSec)], a1First.endTime, settings.speedNmPerSec);
+
+      function makeTriggeredRoute(triggerTime) {
+        const a1Segments = [a1First];
+        appendLine(a1Segments, a1First.endTime, triggerTime, settings.speedNmPerSec);
+        const a1AtTrigger = stateAt(a1Segments, triggerTime, settings.speedNmPerSec);
+        const a1Second = makeArc(triggerTime, a1AtTrigger.point, a1AtTrigger.heading, -settings.sign, ASSIST_RAD, radius, settings.speedNmPerSec);
+        a1Segments.push(a1Second);
+
+        const a2Segments = [a2First];
+        appendLine(a2Segments, a2First.endTime, triggerTime, settings.speedNmPerSec);
+        const a2AtTrigger = stateAt(a2Segments, triggerTime, settings.speedNmPerSec);
+        const a2Second = makeArc(triggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad + ASSIST_RAD, radius, settings.speedNmPerSec);
+        a2Segments.push(a2Second);
+
+        const maneuverEnd = Math.max(a1Second.endTime, a2Second.endTime);
+        appendLine(a1Segments, a1Second.endTime, maneuverEnd, settings.speedNmPerSec);
+        appendLine(a2Segments, a2Second.endTime, maneuverEnd, settings.speedNmPerSec);
+
+        const completionA1 = stateAt(a1Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionA2 = stateAt(a2Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionSpacing = distance(completionA1, completionA2);
+
+        return {
+          a1Segments,
+          a2Segments,
+          maneuverEnd,
+          completionA1,
+          completionA2,
+          completionSpacing,
+          triggerA1: a1AtTrigger.point,
+          triggerA2: a2AtTrigger.point
+        };
+      }
+
+      const equalSpacing = solveEqualSpacingTrigger(
+        a1First.endTime,
+        makeTriggeredRoute,
+        settings.separation,
+        Math.max(30, a1First.duration * 8)
+      );
+      let triggerTime = a1First.endTime + settings.fixedWait;
+      let crossing = null;
+
+      if (settings.mode === "cross") {
+        crossing = solveLineIntersection(a1First.endPoint, a1First.endHeading, a2AtA1First.point, a2AtA1First.heading);
+        if (crossing && crossing.a1Distance >= 0) {
+          triggerTime = a1First.endTime + crossing.a1Distance / settings.speedNmPerSec;
+        } else {
+          triggerTime = a1First.endTime;
+        }
+      } else if (settings.mode === "optimum") {
+        triggerTime = equalSpacing.triggerTime;
+      }
+
+      const selectedRoute = makeTriggeredRoute(triggerTime);
+
+      const a1Segments = selectedRoute.a1Segments;
+      const a2Segments = selectedRoute.a2Segments;
+      const maneuverEnd = selectedRoute.maneuverEnd;
+      const totalTime = maneuverEnd + FINAL_LEAD_SECONDS;
+      appendLine(a1Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+      appendLine(a2Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+
+      const samples = {
+        a1: sampleSegments(a1Segments, totalTime, settings.speedNmPerSec),
+        a2: sampleSegments(a2Segments, totalTime, settings.speedNmPerSec)
+      };
+
+      return {
+        radius,
+        a1Segments,
+        a2Segments,
+        a1Start,
+        a2Start,
+        triggerTime,
+        firstTurnCompleteTime: a1First.endTime,
+        totalTime,
+        maneuverEnd,
+        completionA1: selectedRoute.completionA1,
+        completionA2: selectedRoute.completionA2,
+        completionSpacing: selectedRoute.completionSpacing,
+        equalSpacing,
+        crossing,
+        samples
+      };
+    }
+
+    function sampleSegments(segments, totalTime, speed) {
+      const step = clamp(totalTime / 700, 0.035, 0.16);
+      const points = [];
+      for (let time = 0; time < totalTime; time += step) {
+        const state = stateAt(segments, time, speed);
+        points.push({ time, x: state.point.x, y: state.point.y });
+      }
+      const finalState = stateAt(segments, totalTime, speed);
+      points.push({ time: totalTime, x: finalState.point.x, y: finalState.point.y });
+      return points;
+    }
+
+    function resizeCanvas() {
+      const rect = elements.stage.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      viewport = {
+        width: Math.max(1, rect.width),
+        height: Math.max(1, rect.height),
+        dpr
+      };
+      elements.canvas.width = Math.round(viewport.width * dpr);
+      elements.canvas.height = Math.round(viewport.height * dpr);
+      elements.canvas.style.width = `${viewport.width}px`;
+      elements.canvas.style.height = `${viewport.height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
+
+    function makeTransform() {
+      const all = route.samples.a1.concat(route.samples.a2, [
+        { x: route.a1Start.x, y: route.a1Start.y },
+        { x: route.a2Start.x, y: route.a2Start.y }
+      ]);
+      let minX = Math.min(...all.map((point) => point.x));
+      let maxX = Math.max(...all.map((point) => point.x));
+      let minY = Math.min(...all.map((point) => point.y));
+      let maxY = Math.max(...all.map((point) => point.y));
+      const margin = Math.max(0.35, params.separation * 0.4, route.radius * 0.3);
+      minX -= margin;
+      maxX += margin;
+      minY -= margin;
+      maxY += margin;
+
+      const worldWidth = Math.max(0.1, maxX - minX);
+      const worldHeight = Math.max(0.1, maxY - minY);
+      const canvasAspect = viewport.width / viewport.height;
+      const worldAspect = worldWidth / worldHeight;
+
+      if (worldAspect < canvasAspect) {
+        const expandedWidth = worldHeight * canvasAspect;
+        const extra = (expandedWidth - worldWidth) / 2;
+        minX -= extra;
+        maxX += extra;
+      } else {
+        const expandedHeight = worldWidth / canvasAspect;
+        const extra = (expandedHeight - worldHeight) / 2;
+        minY -= extra;
+        maxY += extra;
+      }
+
+      const scaleFactor = viewport.width / (maxX - minX);
+      return {
+        minX,
+        maxX,
+        minY,
+        maxY,
+        scale: scaleFactor,
+        toScreen(point) {
+          return {
+            x: (point.x - minX) * scaleFactor,
+            y: (maxY - point.y) * scaleFactor
+          };
+        }
+      };
+    }
+
+    function draw() {
+      if (!route || viewport.width <= 1) {
+        return;
+      }
+
+      ctx.clearRect(0, 0, viewport.width, viewport.height);
+      const transform = makeTransform();
+      drawGrid(transform);
+      drawInitialSeparation(transform);
+      drawAircraftPath(route.samples.a1, elapsed, "var(--a1)", "rgba(217, 95, 67, 0.28)", transform);
+      drawAircraftPath(route.samples.a2, elapsed, "var(--a2)", "rgba(31, 122, 140, 0.28)", transform);
+      drawTriggerMarkers(transform);
+      drawCompletionSpacing(transform);
+      if (params.showOptimum) {
+        drawEqualSpacingReference(transform);
+      }
+
+      const a1 = stateAt(route.a1Segments, elapsed, params.speedNmPerSec);
+      const a2 = stateAt(route.a2Segments, elapsed, params.speedNmPerSec);
+      drawAircraft(a1.point, a1.heading, "#d95f43", "A1", transform);
+      drawAircraft(a2.point, a2.heading, "#1f7a8c", "A2", transform);
+    }
+
+    function cssColor(value) {
+      if (!value.startsWith("var(")) {
+        return value;
+      }
+      const name = value.slice(4, -1).trim();
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function drawGrid(transform) {
+      const gridStep = chooseGridStep((transform.maxX - transform.minX) / 8);
+      ctx.save();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#e2e8e5";
+      ctx.fillStyle = "#7d8782";
+      ctx.font = "12px Inter, system-ui, sans-serif";
+      ctx.textBaseline = "middle";
+
+      const startX = Math.floor(transform.minX / gridStep) * gridStep;
+      for (let x = startX; x <= transform.maxX; x += gridStep) {
+        const a = transform.toScreen({ x, y: transform.minY });
+        const b = transform.toScreen({ x, y: transform.maxY });
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+
+      const startY = Math.floor(transform.minY / gridStep) * gridStep;
+      for (let y = startY; y <= transform.maxY; y += gridStep) {
+        const a = transform.toScreen({ x: transform.minX, y });
+        const b = transform.toScreen({ x: transform.maxX, y });
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+
+      drawScaleBar(transform, gridStep);
+      ctx.restore();
+    }
+
+    function chooseGridStep(raw) {
+      const steps = [0.25, 0.5, 1, 2, 5, 10];
+      return steps.find((step) => step >= raw) || 10;
+    }
+
+    function drawScaleBar(transform, gridStep) {
+      const length = gridStep;
+      const start = transform.toScreen({
+        x: transform.minX + (transform.maxX - transform.minX) * 0.06,
+        y: transform.minY + (transform.maxY - transform.minY) * 0.08
+      });
+      const end = {
+        x: start.x + length * transform.scale,
+        y: start.y
+      };
+      ctx.strokeStyle = "#6d7773";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.moveTo(start.x, start.y - 5);
+      ctx.lineTo(start.x, start.y + 5);
+      ctx.moveTo(end.x, end.y - 5);
+      ctx.lineTo(end.x, end.y + 5);
+      ctx.stroke();
+      ctx.fillStyle = "#596460";
+      ctx.textAlign = "center";
+      const label = Number.isInteger(length) ? `${length} NM` : `${length.toFixed(2)} NM`;
+      ctx.fillText(label, (start.x + end.x) / 2, start.y - 16);
+    }
+
+    function drawInitialSeparation(transform) {
+      const xOffset = -Math.max(0.18, params.separation * 0.14);
+      const p1 = transform.toScreen({ x: xOffset, y: route.a1Start.y });
+      const p2 = transform.toScreen({ x: xOffset, y: route.a2Start.y });
+      ctx.save();
+      ctx.strokeStyle = "#48524e";
+      ctx.fillStyle = "#48524e";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x - 8, p1.y);
+      ctx.lineTo(p1.x + 8, p1.y);
+      ctx.moveTo(p2.x - 8, p2.y);
+      ctx.lineTo(p2.x + 8, p2.y);
+      ctx.stroke();
+      ctx.font = "700 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(formatNm(params.separation), p1.x + 12, (p1.y + p2.y) / 2);
+      ctx.restore();
+    }
+
+    function drawTriggerMarkers(transform) {
+      const a1 = stateAt(route.a1Segments, route.triggerTime, params.speedNmPerSec);
+      const a2 = stateAt(route.a2Segments, route.triggerTime, params.speedNmPerSec);
+      ctx.save();
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = "#8b817a";
+      [a1.point, a2.point].forEach((point) => {
+        const p = transform.toScreen(point);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#645c57";
+      ctx.font = "700 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      const label = transform.toScreen(a1.point);
+      ctx.fillText("Trigger", label.x + 10, label.y - 8);
+      ctx.restore();
+    }
+
+    function drawCompletionSpacing(transform) {
+      const p1 = transform.toScreen(route.completionA1);
+      const p2 = transform.toScreen(route.completionA2);
+      const mid = {
+        x: (p1.x + p2.x) / 2,
+        y: (p1.y + p2.y) / 2
+      };
+      const label = `Post-turn ${formatNm(route.completionSpacing)}`;
+
+      ctx.save();
+      ctx.strokeStyle = "#2f3a36";
+      ctx.fillStyle = "#2f3a36";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(p1.x, p1.y, 4, 0, Math.PI * 2);
+      ctx.arc(p2.x, p2.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = "700 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const metrics = ctx.measureText(label);
+      const boxWidth = metrics.width + 16;
+      const boxHeight = 24;
+      const labelY = mid.y - 18;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.strokeStyle = "#d8dfdc";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(mid.x - boxWidth / 2, labelY - boxHeight / 2, boxWidth, boxHeight, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#2f3a36";
+      ctx.fillText(label, mid.x, labelY);
+      ctx.restore();
+    }
+
+    function drawEqualSpacingReference(transform) {
+      if (!route.equalSpacing.result) {
+        return;
+      }
+
+      const p1 = transform.toScreen(route.equalSpacing.result.triggerA1);
+      const p2 = transform.toScreen(route.equalSpacing.result.triggerA2);
+      const mid = {
+        x: (p1.x + p2.x) / 2,
+        y: (p1.y + p2.y) / 2
+      };
+      const waitLabel = route.equalSpacing.available
+        ? `Turn here +${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`
+        : `Closest +${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`;
+
+      ctx.save();
+      ctx.strokeStyle = "#2e6f58";
+      ctx.fillStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      drawDiamond(p1.x, p1.y, 8);
+      drawDiamond(p2.x, p2.y, 8);
+
+      ctx.font = "800 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const metrics = ctx.measureText(waitLabel);
+      const boxWidth = metrics.width + 18;
+      const boxHeight = 25;
+      const labelY = mid.y + 20;
+      const labelX = clamp(mid.x, boxWidth / 2 + 8, viewport.width - boxWidth / 2 - 8);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+      ctx.strokeStyle = "#2e6f58";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(labelX - boxWidth / 2, labelY - boxHeight / 2, boxWidth, boxHeight, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#2e6f58";
+      ctx.fillText(waitLabel, labelX, labelY);
+      ctx.restore();
+    }
+
+    function drawDiamond(x, y, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - radius);
+      ctx.lineTo(x + radius, y);
+      ctx.lineTo(x, y + radius);
+      ctx.lineTo(x - radius, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawAircraftPath(points, splitTime, pastColor, futureColor, transform) {
+      const past = [];
+      const future = [];
+      for (const point of points) {
+        if (point.time <= splitTime) {
+          past.push(point);
+        } else {
+          future.push(point);
+        }
+      }
+
+      const currentState = pointAtSamples(points, splitTime);
+      if (currentState) {
+        past.push(currentState);
+        future.unshift(currentState);
+      }
+
+      drawPolyline(future, futureColor, transform, [9, 8], 3);
+      drawPolyline(past, cssColor(pastColor), transform, [], 4);
+    }
+
+    function pointAtSamples(points, time) {
+      if (time <= 0) {
+        return points[0];
+      }
+      for (let index = 1; index < points.length; index += 1) {
+        const prev = points[index - 1];
+        const next = points[index];
+        if (next.time >= time) {
+          const amount = (time - prev.time) / Math.max(0.0001, next.time - prev.time);
+          return {
+            time,
+            x: prev.x + (next.x - prev.x) * amount,
+            y: prev.y + (next.y - prev.y) * amount
+          };
+        }
+      }
+      return points[points.length - 1];
+    }
+
+    function drawPolyline(points, color, transform, dash, width) {
+      if (points.length < 2) {
+        return;
+      }
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      const first = transform.toScreen(points[0]);
+      ctx.moveTo(first.x, first.y);
+      for (let index = 1; index < points.length; index += 1) {
+        const point = transform.toScreen(points[index]);
+        ctx.lineTo(point.x, point.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawAircraft(point, heading, color, label, transform) {
+      const p = transform.toScreen(point);
+      const angle = -heading;
+      const length = 34;
+      const width = 18;
+      const tail = 13;
+      const shape = [
+        { x: length / 2, y: 0 },
+        { x: -tail, y: width / 2 },
+        { x: -tail / 2, y: 0 },
+        { x: -tail, y: -width / 2 }
+      ];
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      shape.forEach((vertex, index) => {
+        if (index === 0) {
+          ctx.moveTo(vertex.x, vertex.y);
+        } else {
+          ctx.lineTo(vertex.x, vertex.y);
+        }
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = "#18211f";
+      ctx.font = "800 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, p.x, p.y - 27);
+      ctx.restore();
+    }
+
+    function updateOutputs() {
+      elements.turnAngleValue.value = `${params.angleDeg.toFixed(0)} deg`;
+      elements.separationValue.value = formatNm(params.separation);
+      elements.speedValue.value = `${params.speedKts.toFixed(0)} kt`;
+      elements.fixedWaitValue.value = formatSeconds(params.fixedWait);
+      elements.timeSlider.max = route.totalTime.toFixed(1);
+      elements.timeSlider.value = elapsed.toFixed(1);
+      elements.timeReadout.value = `${elapsed.toFixed(1)} / ${route.totalTime.toFixed(1)} s`;
+      elements.elapsedLarge.textContent = formatSeconds(elapsed);
+      elements.triggerSummary.textContent = `Trigger ${route.triggerTime.toFixed(1)} s`;
+      elements.durationSummary.textContent = `Duration ${route.totalTime.toFixed(1)} s`;
+      elements.radiusSummary.textContent = `Radius ${route.radius.toFixed(2)} NM`;
+      elements.completionSpacingSummary.textContent = `Post-turn spacing ${formatNm(route.completionSpacing)}`;
+      elements.equalSpacingSummary.textContent = route.equalSpacing.available
+        ? `Optimum turn ${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`
+        : `Closest spacing turn ${route.equalSpacing.waitAfterFirstComplete.toFixed(1)} s after A1 first`;
+      const fixed = params.mode === "fixed";
+      elements.fixedWait.disabled = !fixed;
+      elements.fixedWaitGroup.classList.toggle("disabled", !fixed);
+    }
+
+    function rebuild() {
+      params = readParams();
+      route = buildRoute(params);
+      elapsed = clamp(elapsed, 0, route.totalTime);
+      updateOutputs();
+      draw();
+    }
+
+    function setElapsed(value) {
+      elapsed = clamp(value, 0, route.totalTime);
+      updateOutputs();
+      draw();
+    }
+
+    function setPlaying(next) {
+      playing = next;
+      lastFrameTime = 0;
+      elements.playPause.setAttribute("aria-label", playing ? "Pause" : "Play");
+      elements.playPause.setAttribute("title", playing ? "Pause" : "Play");
+      elements.playPause.firstElementChild.className = playing ? "pause-symbol" : "play-symbol";
+      if (playing) {
+        requestAnimationFrame(tick);
+      }
+    }
+
+    function tick(timestamp) {
+      if (!playing) {
+        return;
+      }
+      if (!lastFrameTime) {
+        lastFrameTime = timestamp;
+      }
+      const deltaSeconds = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+      setElapsed(elapsed + deltaSeconds);
+      if (elapsed >= route.totalTime) {
+        setPlaying(false);
+        return;
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function wireControls() {
+      [elements.turnAngle, elements.separation, elements.speed, elements.fixedWait].forEach((control) => {
+        control.addEventListener("input", rebuild);
+      });
+
+      document.querySelectorAll("input[name='direction'], input[name='mode']").forEach((control) => {
+        control.addEventListener("change", rebuild);
+      });
+
+      elements.showOptimum.addEventListener("change", rebuild);
+
+      document.querySelectorAll(".segmented span").forEach((span) => {
+        span.addEventListener("keydown", (event) => {
+          if (event.key === " " || event.key === "Enter") {
+            event.preventDefault();
+            span.previousElementSibling.checked = true;
+            span.previousElementSibling.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        });
+      });
+
+      elements.timeSlider.addEventListener("input", () => {
+        setElapsed(Number(elements.timeSlider.value));
+      });
+
+      elements.playPause.addEventListener("click", () => {
+        if (!playing && elapsed >= route.totalTime - 0.05) {
+          setElapsed(0);
+        }
+        setPlaying(!playing);
+      });
+    }
+
+    wireControls();
+
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(resizeCanvas).observe(elements.stage);
+    } else {
+      window.addEventListener("resize", resizeCanvas);
+    }
+
+    rebuild();
+    resizeCanvas();
+  </script>
+</body>
+</html>
