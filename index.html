@@ -2548,9 +2548,8 @@
       elements.radiusSummary.textContent = `Radius ${route.radius.toFixed(2)} NM`;
       elements.turnProfileSummary.textContent = `Turn ${formatG(params.turnLoadFactor)}`;
       elements.completionSpacingSummary.textContent = `Spacing ${formatNm(route.completionSpacing)}`;
-      const plainLegend = params.maneuverType === "cross180" || params.maneuverType === "shackle";
-      elements.a1LegendLabel.textContent = plainLegend ? "A1" : "A1 outside";
-      elements.a2LegendLabel.textContent = plainLegend ? "A2" : "A2 inside";
+      elements.a1LegendLabel.textContent = "A1";
+      elements.a2LegendLabel.textContent = "A2";
       elements.turnAngleGroup.hidden = !needsTurnAngleControl(params.maneuverType);
       elements.directionGroup.hidden = !needsDirectionControl(params.maneuverType);
       elements.firstTurnGroup.hidden = params.maneuverType !== "double";
