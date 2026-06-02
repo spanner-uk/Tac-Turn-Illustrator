@@ -744,7 +744,7 @@
             <output id="aircraftGValue" for="aircraft">4.5 G MIL</output>
           </div>
           <select id="aircraft">
-            <option value="f16Block20">F-16 Block 20</option>
+            <option value="f16Block20">F-16C</option>
             <option value="fa18c" selected>F/A-18C</option>
             <option value="f14b">F-14B</option>
           </select>
@@ -806,8 +806,8 @@
           </label>
         </div>
         <div class="legend" aria-hidden="true">
-          <span class="legend-item"><span class="swatch"></span><span id="a1LegendLabel">A1 outside</span></span>
-          <span class="legend-item"><span class="swatch"></span><span id="a2LegendLabel">A2 inside</span></span>
+          <span class="legend-item"><span class="swatch"></span><span id="a1LegendLabel">A1</span></span>
+          <span class="legend-item"><span class="swatch"></span><span id="a2LegendLabel">A2</span></span>
         </div>
       </div>
     </section>
@@ -830,7 +830,7 @@
     // Practical MIL-turn starting points; exact Ps=0 G varies with altitude, weight, stores, and temperature.
     const AIRCRAFT_PROFILES = {
       f16Block20: {
-        label: "F-16 Block 20",
+        label: "F-16C",
         milSustainedG: 4.8,
         maxTurnG: 9
       },
@@ -1413,11 +1413,48 @@
       return buildDoubleAssistedRoute(settings);
     }
 
+    function getStartPositions(settings) {
+      return {
+        a1Start: { x: 0, y: settings.separation / 2 },
+        a2Start: { x: 0, y: -settings.separation / 2 }
+      };
+    }
+
+    function getTurnRoles(settings) {
+      const { a1Start, a2Start } = getStartPositions(settings);
+      const a1IsOutside = settings.sign < 0;
+      return {
+        a1Start,
+        a2Start,
+        outsideAircraft: a1IsOutside ? "a1" : "a2",
+        insideAircraft: a1IsOutside ? "a2" : "a1",
+        outsideStart: a1IsOutside ? a1Start : a2Start,
+        insideStart: a1IsOutside ? a2Start : a1Start
+      };
+    }
+
+    function mapRoleSegments(roles, outsideSegments, insideSegments) {
+      return roles.outsideAircraft === "a1"
+        ? { a1Segments: outsideSegments, a2Segments: insideSegments }
+        : { a1Segments: insideSegments, a2Segments: outsideSegments };
+    }
+
+    function mapRoleTimes(roles, outsideTime, insideTime) {
+      return roles.outsideAircraft === "a1"
+        ? { a1TriggerTime: outsideTime, a2TriggerTime: insideTime }
+        : { a1TriggerTime: insideTime, a2TriggerTime: outsideTime };
+    }
+
+    function mapRoleStates(roles, outsideState, insideState) {
+      return roles.outsideAircraft === "a1"
+        ? { a1: outsideState, a2: insideState }
+        : { a1: insideState, a2: outsideState };
+    }
+
     function buildSynchronousTurnRoute(settings, angle, a1TurnSign, a2TurnSign, extras = {}) {
       const radius = getTurnRadius(settings);
       const startHeading = 0;
-      const a1Start = { x: 0, y: -settings.separation / 2 };
-      const a2Start = { x: 0, y: settings.separation / 2 };
+      const { a1Start, a2Start } = getStartPositions(settings);
       const a1Turn = makeArc(0, a1Start, startHeading, a1TurnSign, angle, radius, settings.speedNmPerSec);
       const a2Turn = makeArc(0, a2Start, startHeading, a2TurnSign, angle, radius, settings.speedNmPerSec);
       const maneuverEnd = Math.max(a1Turn.endTime, a2Turn.endTime);
@@ -1448,17 +1485,16 @@
           offsetX: 42
         });
       }
-      return buildSynchronousTurnRoute(settings, Math.PI, 1, -1, { notes });
+      return buildSynchronousTurnRoute(settings, Math.PI, -1, 1, { notes });
     }
 
     function buildShackleRoute(settings) {
       const radius = getTurnRadius(settings);
       const startHeading = 0;
       const shackleAngle = Math.PI / 4;
-      const a1Start = { x: 0, y: -settings.separation / 2 };
-      const a2Start = { x: 0, y: settings.separation / 2 };
-      const a1In = makeArc(0, a1Start, startHeading, 1, shackleAngle, radius, settings.speedNmPerSec);
-      const a2In = makeArc(0, a2Start, startHeading, -1, shackleAngle, radius, settings.speedNmPerSec);
+      const { a1Start, a2Start } = getStartPositions(settings);
+      const a1In = makeArc(0, a1Start, startHeading, -1, shackleAngle, radius, settings.speedNmPerSec);
+      const a2In = makeArc(0, a2Start, startHeading, 1, shackleAngle, radius, settings.speedNmPerSec);
       const arcLateralGain = 2 * radius * (1 - Math.cos(shackleAngle));
       const straightDuration = Math.max(0, (settings.separation - arcLateralGain) / (settings.speedNmPerSec * Math.sin(shackleAngle)));
 
@@ -1471,8 +1507,8 @@
 
       const a1StraightEnd = a1Segments[a1Segments.length - 1];
       const a2StraightEnd = a2Segments[a2Segments.length - 1];
-      const a1Out = makeArc(a1StraightEnd.endTime, a1StraightEnd.endPoint, a1StraightEnd.endHeading, -1, shackleAngle, radius, settings.speedNmPerSec);
-      const a2Out = makeArc(a2StraightEnd.endTime, a2StraightEnd.endPoint, a2StraightEnd.endHeading, 1, shackleAngle, radius, settings.speedNmPerSec);
+      const a1Out = makeArc(a1StraightEnd.endTime, a1StraightEnd.endPoint, a1StraightEnd.endHeading, 1, shackleAngle, radius, settings.speedNmPerSec);
+      const a2Out = makeArc(a2StraightEnd.endTime, a2StraightEnd.endPoint, a2StraightEnd.endHeading, -1, shackleAngle, radius, settings.speedNmPerSec);
       a1Segments.push(a1Out);
       a2Segments.push(a2Out);
 
@@ -1496,20 +1532,20 @@
     function buildDoubleAssistedRoute(settings) {
       const radius = getTurnRadius(settings);
       const startHeading = 0;
-      const a1Start = { x: 0, y: -settings.sign * settings.separation / 2 };
-      const a2Start = { x: 0, y: settings.sign * settings.separation / 2 };
+      const roles = getTurnRoles(settings);
+      const { a1Start, a2Start } = roles;
       const overturnAngle = settings.overturnRad;
-      const a1FirstAngle = settings.angleRad + overturnAngle;
-      const a2FirstAngle = overturnAngle;
+      const outsideFirstAngle = settings.angleRad + overturnAngle;
+      const insideFirstAngle = overturnAngle;
 
-      const a1First = makeArc(0, a1Start, startHeading, settings.sign, a1FirstAngle, radius, settings.speedNmPerSec);
-      const a2FirstStartTime = settings.firstStartMode === "outside-first" ? a1First.endTime : 0;
-      const a2FirstStartPoint = add(a2Start, scale(forward(startHeading), settings.speedNmPerSec * a2FirstStartTime));
-      const a2First = makeArc(a2FirstStartTime, a2FirstStartPoint, startHeading, -settings.sign, a2FirstAngle, radius, settings.speedNmPerSec);
-      const a1FirstSegments = [a1First];
-      const a2FirstSegments = a2FirstStartTime > 0
-        ? [makeLine(0, a2Start, startHeading, a2FirstStartTime, settings.speedNmPerSec), a2First]
-        : [a2First];
+      const outsideFirst = makeArc(0, roles.outsideStart, startHeading, settings.sign, outsideFirstAngle, radius, settings.speedNmPerSec);
+      const insideFirstStartTime = settings.firstStartMode === "outside-first" ? outsideFirst.endTime : 0;
+      const insideFirstStartPoint = add(roles.insideStart, scale(forward(startHeading), settings.speedNmPerSec * insideFirstStartTime));
+      const insideFirst = makeArc(insideFirstStartTime, insideFirstStartPoint, startHeading, -settings.sign, insideFirstAngle, radius, settings.speedNmPerSec);
+      const outsideFirstSegments = [outsideFirst];
+      const insideFirstSegments = insideFirstStartTime > 0
+        ? [makeLine(0, roles.insideStart, startHeading, insideFirstStartTime, settings.speedNmPerSec), insideFirst]
+        : [insideFirst];
 
       function stateAfterFirst(segments, firstEndTime, time) {
         const tempSegments = segments.slice();
@@ -1517,85 +1553,88 @@
         return stateAt(tempSegments, time, settings.speedNmPerSec);
       }
 
-      function makeTriggeredRoute(a1TriggerTime, a2TriggerTime = a1TriggerTime) {
-        const safeA1TriggerTime = Math.max(a1TriggerTime, a1First.endTime);
-        const safeA2TriggerTime = Math.max(a2TriggerTime, a2First.endTime);
-        const a1Segments = a1FirstSegments.slice();
-        appendLine(a1Segments, a1First.endTime, safeA1TriggerTime, settings.speedNmPerSec);
-        const a1AtTrigger = stateAt(a1Segments, safeA1TriggerTime, settings.speedNmPerSec);
-        const a1Second = makeArc(safeA1TriggerTime, a1AtTrigger.point, a1AtTrigger.heading, -settings.sign, overturnAngle, radius, settings.speedNmPerSec);
-        a1Segments.push(a1Second);
+      function makeTriggeredRoute(outsideTriggerTime, insideTriggerTime = outsideTriggerTime) {
+        const safeOutsideTriggerTime = Math.max(outsideTriggerTime, outsideFirst.endTime);
+        const safeInsideTriggerTime = Math.max(insideTriggerTime, insideFirst.endTime);
+        const outsideSegments = outsideFirstSegments.slice();
+        appendLine(outsideSegments, outsideFirst.endTime, safeOutsideTriggerTime, settings.speedNmPerSec);
+        const outsideAtTrigger = stateAt(outsideSegments, safeOutsideTriggerTime, settings.speedNmPerSec);
+        const outsideSecond = makeArc(safeOutsideTriggerTime, outsideAtTrigger.point, outsideAtTrigger.heading, -settings.sign, overturnAngle, radius, settings.speedNmPerSec);
+        outsideSegments.push(outsideSecond);
 
-        const a2Segments = a2FirstSegments.slice();
-        appendLine(a2Segments, a2First.endTime, safeA2TriggerTime, settings.speedNmPerSec);
-        const a2AtTrigger = stateAt(a2Segments, safeA2TriggerTime, settings.speedNmPerSec);
-        const a2Second = makeArc(safeA2TriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad + overturnAngle, radius, settings.speedNmPerSec);
-        a2Segments.push(a2Second);
+        const insideSegments = insideFirstSegments.slice();
+        appendLine(insideSegments, insideFirst.endTime, safeInsideTriggerTime, settings.speedNmPerSec);
+        const insideAtTrigger = stateAt(insideSegments, safeInsideTriggerTime, settings.speedNmPerSec);
+        const insideSecond = makeArc(safeInsideTriggerTime, insideAtTrigger.point, insideAtTrigger.heading, settings.sign, settings.angleRad + overturnAngle, radius, settings.speedNmPerSec);
+        insideSegments.push(insideSecond);
 
-        const maneuverEnd = Math.max(a1Second.endTime, a2Second.endTime);
-        appendLine(a1Segments, a1Second.endTime, maneuverEnd, settings.speedNmPerSec);
-        appendLine(a2Segments, a2Second.endTime, maneuverEnd, settings.speedNmPerSec);
+        const maneuverEnd = Math.max(outsideSecond.endTime, insideSecond.endTime);
+        appendLine(outsideSegments, outsideSecond.endTime, maneuverEnd, settings.speedNmPerSec);
+        appendLine(insideSegments, insideSecond.endTime, maneuverEnd, settings.speedNmPerSec);
 
-        const completionA1 = stateAt(a1Segments, maneuverEnd, settings.speedNmPerSec).point;
-        const completionA2 = stateAt(a2Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const mappedSegments = mapRoleSegments(roles, outsideSegments, insideSegments);
+        const mappedTimes = mapRoleTimes(roles, safeOutsideTriggerTime, safeInsideTriggerTime);
+        const completionA1 = stateAt(mappedSegments.a1Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionA2 = stateAt(mappedSegments.a2Segments, maneuverEnd, settings.speedNmPerSec).point;
         const completionSpacing = distance(completionA1, completionA2);
 
         return {
-          a1Segments,
-          a2Segments,
+          ...mappedSegments,
+          ...mappedTimes,
           maneuverEnd,
           completionA1,
           completionA2,
           completionSpacing,
-          a1TriggerTime: safeA1TriggerTime,
-          a2TriggerTime: safeA2TriggerTime,
-          triggerA1: a1AtTrigger.point,
-          triggerA2: a2AtTrigger.point
+          outsideTriggerTime: safeOutsideTriggerTime,
+          insideTriggerTime: safeInsideTriggerTime,
+          triggerOutside: outsideAtTrigger.point,
+          triggerInside: insideAtTrigger.point
         };
       }
 
       const equalSpacing = solveEqualSpacingDelay(
-        (delay) => makeTriggeredRoute(a1First.endTime + delay, a2First.endTime + delay),
+        (delay) => makeTriggeredRoute(outsideFirst.endTime + delay, insideFirst.endTime + delay),
         settings.separation,
-        getEqualSpacingSearchDuration(settings, a1First.duration)
+        getEqualSpacingSearchDuration(settings, outsideFirst.duration)
       );
-      const blindspotReferenceTime = Math.max(a1First.endTime, a2First.endTime);
+      const blindspotReferenceTime = Math.max(outsideFirst.endTime, insideFirst.endTime);
       const blindspotEntry = findA1BlindspotEntryTime(
-        (time) => ({
-          a1: stateAfterFirst(a1FirstSegments, a1First.endTime, time),
-          a2: stateAfterFirst(a2FirstSegments, a2First.endTime, time)
-        }),
+        (time) => mapRoleStates(
+          roles,
+          stateAfterFirst(outsideFirstSegments, outsideFirst.endTime, time),
+          stateAfterFirst(insideFirstSegments, insideFirst.endTime, time)
+        ),
         blindspotReferenceTime,
-        getEqualSpacingSearchDuration(settings, a1First.duration),
+        getEqualSpacingSearchDuration(settings, outsideFirst.duration),
         settings.blindspotRad
       );
-      let a1TriggerTime = a1First.endTime + settings.fixedWait;
-      let a2TriggerTime = a1TriggerTime;
+      let outsideTriggerTime = outsideFirst.endTime + settings.fixedWait;
+      let insideTriggerTime = outsideTriggerTime;
       let crossing = null;
 
       if (settings.mode === "cross") {
-        const crossingReferenceTime = Math.max(a1First.endTime, a2First.endTime);
-        const a1AtCrossingReference = stateAfterFirst(a1FirstSegments, a1First.endTime, crossingReferenceTime);
-        const a2AtCrossingReference = stateAfterFirst(a2FirstSegments, a2First.endTime, crossingReferenceTime);
-        crossing = solveLineIntersection(a1AtCrossingReference.point, a1AtCrossingReference.heading, a2AtCrossingReference.point, a2AtCrossingReference.heading);
+        const crossingReferenceTime = Math.max(outsideFirst.endTime, insideFirst.endTime);
+        const outsideAtCrossingReference = stateAfterFirst(outsideFirstSegments, outsideFirst.endTime, crossingReferenceTime);
+        const insideAtCrossingReference = stateAfterFirst(insideFirstSegments, insideFirst.endTime, crossingReferenceTime);
+        crossing = solveLineIntersection(outsideAtCrossingReference.point, outsideAtCrossingReference.heading, insideAtCrossingReference.point, insideAtCrossingReference.heading);
         if (crossing && crossing.a1Distance >= 0) {
-          a1TriggerTime = crossingReferenceTime + crossing.a1Distance / settings.speedNmPerSec;
+          outsideTriggerTime = crossingReferenceTime + crossing.a1Distance / settings.speedNmPerSec;
         } else {
-          a1TriggerTime = crossingReferenceTime;
+          outsideTriggerTime = crossingReferenceTime;
         }
-        a2TriggerTime = a1TriggerTime;
+        insideTriggerTime = outsideTriggerTime;
       } else if (settings.mode === "fixed") {
-        a1TriggerTime = a1First.endTime + settings.fixedWait;
-        a2TriggerTime = a2First.endTime + settings.fixedWait;
+        outsideTriggerTime = outsideFirst.endTime + settings.fixedWait;
+        insideTriggerTime = insideFirst.endTime + settings.fixedWait;
       } else if (settings.mode === "blindspot") {
-        a1TriggerTime = blindspotEntry.time;
-        a2TriggerTime = blindspotEntry.time;
+        outsideTriggerTime = blindspotEntry.time;
+        insideTriggerTime = blindspotEntry.time;
       } else if (settings.mode === "optimum") {
-        a1TriggerTime = a1First.endTime + equalSpacing.delayAfterFirstComplete;
-        a2TriggerTime = a2First.endTime + equalSpacing.delayAfterFirstComplete;
+        outsideTriggerTime = outsideFirst.endTime + equalSpacing.delayAfterFirstComplete;
+        insideTriggerTime = insideFirst.endTime + equalSpacing.delayAfterFirstComplete;
       }
 
-      const selectedRoute = makeTriggeredRoute(a1TriggerTime, a2TriggerTime);
+      const selectedRoute = makeTriggeredRoute(outsideTriggerTime, insideTriggerTime);
 
       const a1Segments = selectedRoute.a1Segments;
       const a2Segments = selectedRoute.a2Segments;
@@ -1615,12 +1654,19 @@
         a2Segments,
         a1Start,
         a2Start,
+        outsideAircraft: roles.outsideAircraft,
+        insideAircraft: roles.insideAircraft,
+        outsideTriggerTime: selectedRoute.outsideTriggerTime,
+        insideTriggerTime: selectedRoute.insideTriggerTime,
         a1TriggerTime: selectedRoute.a1TriggerTime,
         a2TriggerTime: selectedRoute.a2TriggerTime,
-        firstTurnCompleteTime: a1First.endTime,
-        a1FirstTurnCompleteTime: a1First.endTime,
-        a2FirstTurnStartTime: a2FirstStartTime,
-        a2FirstTurnCompleteTime: a2First.endTime,
+        firstTurnCompleteTime: outsideFirst.endTime,
+        outsideFirstTurnCompleteTime: outsideFirst.endTime,
+        insideFirstTurnStartTime: insideFirstStartTime,
+        insideFirstTurnCompleteTime: insideFirst.endTime,
+        a1FirstTurnCompleteTime: roles.outsideAircraft === "a1" ? outsideFirst.endTime : insideFirst.endTime,
+        a2FirstTurnStartTime: roles.insideAircraft === "a2" ? insideFirstStartTime : 0,
+        a2FirstTurnCompleteTime: roles.outsideAircraft === "a2" ? outsideFirst.endTime : insideFirst.endTime,
         totalTime,
         maneuverEnd,
         completionA1: selectedRoute.completionA1,
@@ -1636,42 +1682,44 @@
     function buildUnassistedRoute(settings) {
       const radius = getTurnRadius(settings);
       const startHeading = 0;
-      const a1Start = { x: 0, y: -settings.sign * settings.separation / 2 };
-      const a2Start = { x: 0, y: settings.sign * settings.separation / 2 };
+      const roles = getTurnRoles(settings);
+      const { a1Start, a2Start } = roles;
 
-      const a1First = makeArc(0, a1Start, startHeading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
-      const a1FirstSegments = [a1First];
+      const outsideFirst = makeArc(0, roles.outsideStart, startHeading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
+      const outsideFirstSegments = [outsideFirst];
 
-      function makeTriggeredRoute(a2TriggerTime) {
-        const safeA2TriggerTime = Math.max(0, a2TriggerTime);
-        const a1Segments = a1FirstSegments.slice();
-        appendLine(a1Segments, a1First.endTime, safeA2TriggerTime, settings.speedNmPerSec);
-        const a1AtTrigger = stateAt(a1Segments, safeA2TriggerTime, settings.speedNmPerSec);
+      function makeTriggeredRoute(insideTriggerTime) {
+        const safeInsideTriggerTime = Math.max(0, insideTriggerTime);
+        const outsideSegments = outsideFirstSegments.slice();
+        appendLine(outsideSegments, outsideFirst.endTime, safeInsideTriggerTime, settings.speedNmPerSec);
+        const outsideAtTrigger = stateAt(outsideSegments, safeInsideTriggerTime, settings.speedNmPerSec);
 
-        const a2Segments = [makeLine(0, a2Start, startHeading, safeA2TriggerTime, settings.speedNmPerSec)];
-        const a2AtTrigger = stateAt(a2Segments, safeA2TriggerTime, settings.speedNmPerSec);
-        const a2Turn = makeArc(safeA2TriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
-        a2Segments.push(a2Turn);
+        const insideSegments = [makeLine(0, roles.insideStart, startHeading, safeInsideTriggerTime, settings.speedNmPerSec)];
+        const insideAtTrigger = stateAt(insideSegments, safeInsideTriggerTime, settings.speedNmPerSec);
+        const insideTurn = makeArc(safeInsideTriggerTime, insideAtTrigger.point, insideAtTrigger.heading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
+        insideSegments.push(insideTurn);
 
-        const maneuverEnd = Math.max(a1First.endTime, a2Turn.endTime);
-        appendLine(a1Segments, Math.max(a1First.endTime, safeA2TriggerTime), maneuverEnd, settings.speedNmPerSec);
-        appendLine(a2Segments, a2Turn.endTime, maneuverEnd, settings.speedNmPerSec);
+        const maneuverEnd = Math.max(outsideFirst.endTime, insideTurn.endTime);
+        appendLine(outsideSegments, Math.max(outsideFirst.endTime, safeInsideTriggerTime), maneuverEnd, settings.speedNmPerSec);
+        appendLine(insideSegments, insideTurn.endTime, maneuverEnd, settings.speedNmPerSec);
 
-        const completionA1 = stateAt(a1Segments, maneuverEnd, settings.speedNmPerSec).point;
-        const completionA2 = stateAt(a2Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const mappedSegments = mapRoleSegments(roles, outsideSegments, insideSegments);
+        const mappedTimes = mapRoleTimes(roles, safeInsideTriggerTime, safeInsideTriggerTime);
+        const completionA1 = stateAt(mappedSegments.a1Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionA2 = stateAt(mappedSegments.a2Segments, maneuverEnd, settings.speedNmPerSec).point;
         const completionSpacing = distance(completionA1, completionA2);
 
         return {
-          a1Segments,
-          a2Segments,
+          ...mappedSegments,
+          ...mappedTimes,
           maneuverEnd,
           completionA1,
           completionA2,
           completionSpacing,
-          a1TriggerTime: safeA2TriggerTime,
-          a2TriggerTime: safeA2TriggerTime,
-          triggerA1: a1AtTrigger.point,
-          triggerA2: a2AtTrigger.point
+          outsideTriggerTime: safeInsideTriggerTime,
+          insideTriggerTime: safeInsideTriggerTime,
+          triggerOutside: outsideAtTrigger.point,
+          triggerInside: insideAtTrigger.point
         };
       }
 
@@ -1681,44 +1729,45 @@
         delayAfterFirstComplete: optimumTriggerTime,
         result: makeTriggeredRoute(optimumTriggerTime)
       };
-      const blindspotReferenceTime = a1First.endTime;
+      const blindspotReferenceTime = outsideFirst.endTime;
       const blindspotEntry = findA1BlindspotEntryTime(
         (time) => {
-          const a1Segments = a1FirstSegments.slice();
-          appendLine(a1Segments, a1First.endTime, time, settings.speedNmPerSec);
-          return {
-            a1: stateAt(a1Segments, time, settings.speedNmPerSec),
-            a2: {
-              point: add(a2Start, scale(forward(startHeading), settings.speedNmPerSec * time)),
+          const outsideSegments = outsideFirstSegments.slice();
+          appendLine(outsideSegments, outsideFirst.endTime, time, settings.speedNmPerSec);
+          return mapRoleStates(
+            roles,
+            stateAt(outsideSegments, time, settings.speedNmPerSec),
+            {
+              point: add(roles.insideStart, scale(forward(startHeading), settings.speedNmPerSec * time)),
               heading: startHeading
             }
-          };
+          );
         },
         blindspotReferenceTime,
-        getEqualSpacingSearchDuration(settings, a1First.duration),
+        getEqualSpacingSearchDuration(settings, outsideFirst.duration),
         settings.blindspotRad
       );
 
-      let a2TriggerTime = a1First.endTime + settings.fixedWait;
+      let insideTriggerTime = outsideFirst.endTime + settings.fixedWait;
       let crossing = null;
 
       if (settings.mode === "cross") {
-        const a2AtA1First = stateAt([makeLine(0, a2Start, startHeading, a1First.endTime, settings.speedNmPerSec)], a1First.endTime, settings.speedNmPerSec);
-        crossing = solveLineIntersection(a1First.endPoint, a1First.endHeading, a2AtA1First.point, startHeading);
+        const insideAtOutsideFirst = stateAt([makeLine(0, roles.insideStart, startHeading, outsideFirst.endTime, settings.speedNmPerSec)], outsideFirst.endTime, settings.speedNmPerSec);
+        crossing = solveLineIntersection(outsideFirst.endPoint, outsideFirst.endHeading, insideAtOutsideFirst.point, startHeading);
         if (crossing && crossing.a1Distance >= 0) {
-          a2TriggerTime = a1First.endTime + crossing.a1Distance / settings.speedNmPerSec;
+          insideTriggerTime = outsideFirst.endTime + crossing.a1Distance / settings.speedNmPerSec;
         } else {
-          a2TriggerTime = a1First.endTime;
+          insideTriggerTime = outsideFirst.endTime;
         }
       } else if (settings.mode === "fixed") {
-        a2TriggerTime = a1First.endTime + settings.fixedWait;
+        insideTriggerTime = outsideFirst.endTime + settings.fixedWait;
       } else if (settings.mode === "blindspot") {
-        a2TriggerTime = blindspotEntry.time;
+        insideTriggerTime = blindspotEntry.time;
       } else if (settings.mode === "optimum") {
-        a2TriggerTime = equalSpacing.delayAfterFirstComplete;
+        insideTriggerTime = equalSpacing.delayAfterFirstComplete;
       }
 
-      const selectedRoute = makeTriggeredRoute(a2TriggerTime);
+      const selectedRoute = makeTriggeredRoute(insideTriggerTime);
       const a1Segments = selectedRoute.a1Segments;
       const a2Segments = selectedRoute.a2Segments;
       const maneuverEnd = selectedRoute.maneuverEnd;
@@ -1737,12 +1786,19 @@
         a2Segments,
         a1Start,
         a2Start,
+        outsideAircraft: roles.outsideAircraft,
+        insideAircraft: roles.insideAircraft,
+        outsideTriggerTime: selectedRoute.outsideTriggerTime,
+        insideTriggerTime: selectedRoute.insideTriggerTime,
         a1TriggerTime: selectedRoute.a1TriggerTime,
         a2TriggerTime: selectedRoute.a2TriggerTime,
-        firstTurnCompleteTime: a1First.endTime,
-        a1FirstTurnCompleteTime: a1First.endTime,
+        firstTurnCompleteTime: outsideFirst.endTime,
+        outsideFirstTurnCompleteTime: outsideFirst.endTime,
+        insideFirstTurnStartTime: 0,
+        insideFirstTurnCompleteTime: 0,
+        a1FirstTurnCompleteTime: roles.outsideAircraft === "a1" ? outsideFirst.endTime : 0,
         a2FirstTurnStartTime: 0,
-        a2FirstTurnCompleteTime: 0,
+        a2FirstTurnCompleteTime: roles.outsideAircraft === "a2" ? outsideFirst.endTime : 0,
         totalTime,
         maneuverEnd,
         completionA1: selectedRoute.completionA1,
@@ -1758,18 +1814,18 @@
     function buildAssistedRoute(settings) {
       const radius = getTurnRadius(settings);
       const startHeading = 0;
-      const a1Start = { x: 0, y: -settings.sign * settings.separation / 2 };
-      const a2Start = { x: 0, y: settings.sign * settings.separation / 2 };
+      const roles = getTurnRoles(settings);
+      const { a1Start, a2Start } = roles;
       const crossingAngle = settings.overturnRad;
       const returnAngle = settings.angleRad + crossingAngle;
 
-      const a1First = makeArc(0, a1Start, startHeading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
-      const a2TurnInStartPoint = add(a2Start, scale(forward(startHeading), settings.speedNmPerSec * a1First.endTime));
-      const a2TurnIn = makeArc(a1First.endTime, a2TurnInStartPoint, startHeading, -settings.sign, crossingAngle, radius, settings.speedNmPerSec);
-      const a1FirstSegments = [a1First];
-      const a2TurnInSegments = [
-        makeLine(0, a2Start, startHeading, a1First.endTime, settings.speedNmPerSec),
-        a2TurnIn
+      const outsideFirst = makeArc(0, roles.outsideStart, startHeading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
+      const insideTurnInStartPoint = add(roles.insideStart, scale(forward(startHeading), settings.speedNmPerSec * outsideFirst.endTime));
+      const insideTurnIn = makeArc(outsideFirst.endTime, insideTurnInStartPoint, startHeading, -settings.sign, crossingAngle, radius, settings.speedNmPerSec);
+      const outsideFirstSegments = [outsideFirst];
+      const insideTurnInSegments = [
+        makeLine(0, roles.insideStart, startHeading, outsideFirst.endTime, settings.speedNmPerSec),
+        insideTurnIn
       ];
 
       function stateAfterTurnIn(segments, firstEndTime, time) {
@@ -1779,74 +1835,77 @@
       }
 
       function makeTriggeredRoute(returnTriggerTime) {
-        const safeReturnTriggerTime = Math.max(returnTriggerTime, a2TurnIn.endTime);
-        const a1Segments = a1FirstSegments.slice();
-        appendLine(a1Segments, a1First.endTime, safeReturnTriggerTime, settings.speedNmPerSec);
-        const a1AtTrigger = stateAt(a1Segments, safeReturnTriggerTime, settings.speedNmPerSec);
+        const safeReturnTriggerTime = Math.max(returnTriggerTime, insideTurnIn.endTime);
+        const outsideSegments = outsideFirstSegments.slice();
+        appendLine(outsideSegments, outsideFirst.endTime, safeReturnTriggerTime, settings.speedNmPerSec);
+        const outsideAtTrigger = stateAt(outsideSegments, safeReturnTriggerTime, settings.speedNmPerSec);
 
-        const a2Segments = a2TurnInSegments.slice();
-        appendLine(a2Segments, a2TurnIn.endTime, safeReturnTriggerTime, settings.speedNmPerSec);
-        const a2AtTrigger = stateAt(a2Segments, safeReturnTriggerTime, settings.speedNmPerSec);
-        const a2Return = makeArc(safeReturnTriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, returnAngle, radius, settings.speedNmPerSec);
-        a2Segments.push(a2Return);
+        const insideSegments = insideTurnInSegments.slice();
+        appendLine(insideSegments, insideTurnIn.endTime, safeReturnTriggerTime, settings.speedNmPerSec);
+        const insideAtTrigger = stateAt(insideSegments, safeReturnTriggerTime, settings.speedNmPerSec);
+        const insideReturn = makeArc(safeReturnTriggerTime, insideAtTrigger.point, insideAtTrigger.heading, settings.sign, returnAngle, radius, settings.speedNmPerSec);
+        insideSegments.push(insideReturn);
 
-        const maneuverEnd = Math.max(a1First.endTime, a2Return.endTime);
-        appendLine(a1Segments, safeReturnTriggerTime, maneuverEnd, settings.speedNmPerSec);
-        appendLine(a2Segments, a2Return.endTime, maneuverEnd, settings.speedNmPerSec);
+        const maneuverEnd = Math.max(outsideFirst.endTime, insideReturn.endTime);
+        appendLine(outsideSegments, safeReturnTriggerTime, maneuverEnd, settings.speedNmPerSec);
+        appendLine(insideSegments, insideReturn.endTime, maneuverEnd, settings.speedNmPerSec);
 
-        const completionA1 = stateAt(a1Segments, maneuverEnd, settings.speedNmPerSec).point;
-        const completionA2 = stateAt(a2Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const mappedSegments = mapRoleSegments(roles, outsideSegments, insideSegments);
+        const mappedTimes = mapRoleTimes(roles, safeReturnTriggerTime, safeReturnTriggerTime);
+        const completionA1 = stateAt(mappedSegments.a1Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionA2 = stateAt(mappedSegments.a2Segments, maneuverEnd, settings.speedNmPerSec).point;
         const completionSpacing = distance(completionA1, completionA2);
 
         return {
-          a1Segments,
-          a2Segments,
+          ...mappedSegments,
+          ...mappedTimes,
           maneuverEnd,
           completionA1,
           completionA2,
           completionSpacing,
-          a1TriggerTime: safeReturnTriggerTime,
-          a2TriggerTime: safeReturnTriggerTime,
-          triggerA1: a1AtTrigger.point,
-          triggerA2: a2AtTrigger.point
+          outsideTriggerTime: safeReturnTriggerTime,
+          insideTriggerTime: safeReturnTriggerTime,
+          triggerOutside: outsideAtTrigger.point,
+          triggerInside: insideAtTrigger.point
         };
       }
 
       const equalSpacing = solveEqualSpacingDelay(
-        (delay) => makeTriggeredRoute(a2TurnIn.endTime + delay),
+        (delay) => makeTriggeredRoute(insideTurnIn.endTime + delay),
         settings.separation,
-        getEqualSpacingSearchDuration(settings, Math.max(a1First.duration, a2TurnIn.duration))
+        getEqualSpacingSearchDuration(settings, Math.max(outsideFirst.duration, insideTurnIn.duration))
       );
-      const blindspotReferenceTime = Math.max(a1First.endTime, a2TurnIn.endTime);
+      const blindspotReferenceTime = Math.max(outsideFirst.endTime, insideTurnIn.endTime);
       const blindspotEntry = findA1BlindspotEntryTime(
-        (time) => ({
-          a1: stateAfterTurnIn(a1FirstSegments, a1First.endTime, time),
-          a2: stateAfterTurnIn(a2TurnInSegments, a2TurnIn.endTime, time)
-        }),
+        (time) => mapRoleStates(
+          roles,
+          stateAfterTurnIn(outsideFirstSegments, outsideFirst.endTime, time),
+          stateAfterTurnIn(insideTurnInSegments, insideTurnIn.endTime, time)
+        ),
         blindspotReferenceTime,
-        getEqualSpacingSearchDuration(settings, Math.max(a1First.duration, a2TurnIn.duration)),
+        getEqualSpacingSearchDuration(settings, Math.max(outsideFirst.duration, insideTurnIn.duration)),
         settings.blindspotRad
       );
 
-      let returnTriggerTime = a2TurnIn.endTime + settings.fixedWait;
+      let returnTriggerTime = insideTurnIn.endTime + settings.fixedWait;
       let crossing = null;
 
       if (settings.mode === "cross") {
-        const crossingReferenceTime = Math.max(a1First.endTime, a2TurnIn.endTime);
-        const a1AtCrossingReference = stateAfterTurnIn(a1FirstSegments, a1First.endTime, crossingReferenceTime);
-        const a2AtCrossingReference = stateAfterTurnIn(a2TurnInSegments, a2TurnIn.endTime, crossingReferenceTime);
-        crossing = solveLineIntersection(a1AtCrossingReference.point, a1AtCrossingReference.heading, a2AtCrossingReference.point, a2AtCrossingReference.heading);
+        const crossingReferenceTime = Math.max(outsideFirst.endTime, insideTurnIn.endTime);
+        const outsideAtCrossingReference = stateAfterTurnIn(outsideFirstSegments, outsideFirst.endTime, crossingReferenceTime);
+        const insideAtCrossingReference = stateAfterTurnIn(insideTurnInSegments, insideTurnIn.endTime, crossingReferenceTime);
+        crossing = solveLineIntersection(outsideAtCrossingReference.point, outsideAtCrossingReference.heading, insideAtCrossingReference.point, insideAtCrossingReference.heading);
         if (crossing && crossing.a1Distance >= 0) {
           returnTriggerTime = crossingReferenceTime + crossing.a1Distance / settings.speedNmPerSec;
         } else {
           returnTriggerTime = crossingReferenceTime;
         }
       } else if (settings.mode === "fixed") {
-        returnTriggerTime = a2TurnIn.endTime + settings.fixedWait;
+        returnTriggerTime = insideTurnIn.endTime + settings.fixedWait;
       } else if (settings.mode === "blindspot") {
         returnTriggerTime = blindspotEntry.time;
       } else if (settings.mode === "optimum") {
-        returnTriggerTime = a2TurnIn.endTime + equalSpacing.delayAfterFirstComplete;
+        returnTriggerTime = insideTurnIn.endTime + equalSpacing.delayAfterFirstComplete;
       }
 
       const selectedRoute = makeTriggeredRoute(returnTriggerTime);
@@ -1868,12 +1927,19 @@
         a2Segments,
         a1Start,
         a2Start,
+        outsideAircraft: roles.outsideAircraft,
+        insideAircraft: roles.insideAircraft,
+        outsideTriggerTime: selectedRoute.outsideTriggerTime,
+        insideTriggerTime: selectedRoute.insideTriggerTime,
         a1TriggerTime: selectedRoute.a1TriggerTime,
         a2TriggerTime: selectedRoute.a2TriggerTime,
-        firstTurnCompleteTime: a1First.endTime,
-        a1FirstTurnCompleteTime: a1First.endTime,
-        a2FirstTurnStartTime: a2TurnIn.startTime,
-        a2FirstTurnCompleteTime: a2TurnIn.endTime,
+        firstTurnCompleteTime: outsideFirst.endTime,
+        outsideFirstTurnCompleteTime: outsideFirst.endTime,
+        insideFirstTurnStartTime: insideTurnIn.startTime,
+        insideFirstTurnCompleteTime: insideTurnIn.endTime,
+        a1FirstTurnCompleteTime: roles.outsideAircraft === "a1" ? outsideFirst.endTime : insideTurnIn.endTime,
+        a2FirstTurnStartTime: roles.insideAircraft === "a2" ? insideTurnIn.startTime : 0,
+        a2FirstTurnCompleteTime: roles.outsideAircraft === "a2" ? outsideFirst.endTime : insideTurnIn.endTime,
         totalTime,
         maneuverEnd,
         completionA1: selectedRoute.completionA1,
@@ -2135,20 +2201,12 @@
       if (route.showTriggerMarkers === false) {
         return [];
       }
-      const a1AtA1Trigger = stateAt(route.a1Segments, route.a1TriggerTime, params.speedNmPerSec);
-      const a2AtA1Trigger = stateAt(route.a2Segments, route.a1TriggerTime, params.speedNmPerSec);
-      const a2AtA2Trigger = stateAt(route.a2Segments, route.a2TriggerTime, params.speedNmPerSec);
-      const a1AtA2Trigger = stateAt(route.a1Segments, route.a2TriggerTime, params.speedNmPerSec);
+      const outsideAircraft = route.outsideAircraft || "a1";
+      const insideAircraft = route.insideAircraft || "a2";
+      const outsideTriggerTime = typeof route.outsideTriggerTime === "number" ? route.outsideTriggerTime : route.a1TriggerTime;
+      const insideTriggerTime = typeof route.insideTriggerTime === "number" ? route.insideTriggerTime : route.a2TriggerTime;
       const insideFirstCue = getInsideFirstTurnCueSnapshot();
-      const insideTurnMarker = {
-        id: "a2",
-        trigger: a2AtA2Trigger,
-        ghost: a1AtA2Trigger,
-        triggerLabel: "",
-        ghostLabel: "",
-        ghostColor: "#d95f43",
-        time: route.a2TriggerTime
-      };
+      const insideTurnMarker = makeTriggerMarker(insideAircraft, insideTriggerTime);
 
       if (params.maneuverType === "assisted" || params.maneuverType === "unassisted") {
         return params.maneuverType === "assisted" && insideFirstCue
@@ -2156,15 +2214,7 @@
           : [insideTurnMarker];
       }
       const markers = [
-        {
-          id: "a1",
-          trigger: a1AtA1Trigger,
-          ghost: a2AtA1Trigger,
-          triggerLabel: "",
-          ghostLabel: "",
-          ghostColor: "#1f7a8c",
-          time: route.a1TriggerTime
-        },
+        makeTriggerMarker(outsideAircraft, outsideTriggerTime),
         insideTurnMarker
       ];
       if (insideFirstCue && params.firstStartMode === "outside-first") {
@@ -2173,21 +2223,53 @@
       return markers;
     }
 
-    function getInsideFirstTurnCueSnapshot() {
-      if (typeof route.a2FirstTurnStartTime !== "number" || route.a2FirstTurnStartTime <= 0.0001) {
-        return null;
-      }
-      const a2AtCue = stateAt(route.a2Segments, route.a2FirstTurnStartTime, params.speedNmPerSec);
-      const a1AtCue = stateAt(route.a1Segments, route.a2FirstTurnStartTime, params.speedNmPerSec);
+    function getAircraftSegments(aircraft) {
+      return aircraft === "a1" ? route.a1Segments : route.a2Segments;
+    }
+
+    function getOtherAircraft(aircraft) {
+      return aircraft === "a1" ? "a2" : "a1";
+    }
+
+    function getAircraftColor(aircraft) {
+      return aircraft === "a1" ? "#d95f43" : "#2e6f58";
+    }
+
+    function getAircraftStateAt(aircraft, time) {
+      return stateAt(getAircraftSegments(aircraft), time, params.speedNmPerSec);
+    }
+
+    function makeTriggerMarker(aircraft, time) {
+      const otherAircraft = getOtherAircraft(aircraft);
       return {
-        id: "a2-first",
-        trigger: a2AtCue,
-        ghost: a1AtCue,
+        id: aircraft,
+        trigger: getAircraftStateAt(aircraft, time),
+        ghost: getAircraftStateAt(otherAircraft, time),
         triggerLabel: "",
         ghostLabel: "",
-        ghostColor: "#d95f43",
-        cueText: "Cue: A1 levels wings",
-        time: route.a2FirstTurnStartTime
+        ghostColor: getAircraftColor(otherAircraft),
+        time
+      };
+    }
+
+    function getInsideFirstTurnCueSnapshot() {
+      const insideFirstTurnStartTime = typeof route.insideFirstTurnStartTime === "number"
+        ? route.insideFirstTurnStartTime
+        : route.a2FirstTurnStartTime;
+      if (typeof insideFirstTurnStartTime !== "number" || insideFirstTurnStartTime <= 0.0001) {
+        return null;
+      }
+      const insideAircraft = route.insideAircraft || "a2";
+      const outsideAircraft = route.outsideAircraft || "a1";
+      return {
+        id: `${insideAircraft}-first`,
+        trigger: getAircraftStateAt(insideAircraft, insideFirstTurnStartTime),
+        ghost: getAircraftStateAt(outsideAircraft, insideFirstTurnStartTime),
+        triggerLabel: "",
+        ghostLabel: "",
+        ghostColor: getAircraftColor(outsideAircraft),
+        cueText: `Cue: ${outsideAircraft.toUpperCase()} levels wings`,
+        time: insideFirstTurnStartTime
       };
     }
 
@@ -2195,7 +2277,7 @@
       const triggerPoint = transform.toScreen(item.trigger.point);
       const ghostPoint = transform.toScreen(item.ghost.point);
       const active = activeTrigger === item.id;
-      const triggerColor = item.id === "a1" ? "#d95f43" : "#2e6f58";
+      const triggerColor = item.id.startsWith("a1") ? "#d95f43" : "#2e6f58";
 
       ctx.save();
       ctx.lineWidth = active ? 2.5 : 1.5;
