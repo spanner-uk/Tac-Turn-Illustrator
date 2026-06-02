@@ -1271,14 +1271,14 @@
       return angularDistance(bearing, tailBearing) <= coneAngle / 2;
     }
 
-    function a1InA2Blindspot(getStates, time, coneAngle) {
+    function isBlindspotEntryCondition(getStates, time, coneAngle, observerAircraft = "a2", targetAircraft = "a1") {
       const states = getStates(time);
-      return isInBlindspot(states.a2, states.a1, coneAngle);
+      return isInBlindspot(states[observerAircraft], states[targetAircraft], coneAngle);
     }
 
-    function findA1BlindspotEntryTime(getStates, startTime, searchDuration, coneAngle) {
+    function findBlindspotEntryTime(getStates, startTime, searchDuration, coneAngle, observerAircraft = "a2", targetAircraft = "a1") {
       let previousTime = startTime;
-      let previousInside = a1InA2Blindspot(getStates, previousTime, coneAngle);
+      let previousInside = isBlindspotEntryCondition(getStates, previousTime, coneAngle, observerAircraft, targetAircraft);
       if (previousInside) {
         return {
           available: true,
@@ -1289,13 +1289,13 @@
       const steps = clamp(Math.ceil(searchDuration / 0.05), 320, 7000);
       for (let index = 1; index <= steps; index += 1) {
         const time = startTime + (searchDuration * index) / steps;
-        const inside = a1InA2Blindspot(getStates, time, coneAngle);
+        const inside = isBlindspotEntryCondition(getStates, time, coneAngle, observerAircraft, targetAircraft);
         if (!previousInside && inside) {
           let low = previousTime;
           let high = time;
           for (let refine = 0; refine < 36; refine += 1) {
             const mid = (low + high) / 2;
-            if (a1InA2Blindspot(getStates, mid, coneAngle)) {
+            if (isBlindspotEntryCondition(getStates, mid, coneAngle, observerAircraft, targetAircraft)) {
               high = mid;
             } else {
               low = mid;
@@ -1598,7 +1598,7 @@
         getEqualSpacingSearchDuration(settings, outsideFirst.duration)
       );
       const blindspotReferenceTime = Math.max(outsideFirst.endTime, insideFirst.endTime);
-      const blindspotEntry = findA1BlindspotEntryTime(
+      const blindspotEntry = findBlindspotEntryTime(
         (time) => mapRoleStates(
           roles,
           stateAfterFirst(outsideFirstSegments, outsideFirst.endTime, time),
@@ -1606,7 +1606,9 @@
         ),
         blindspotReferenceTime,
         getEqualSpacingSearchDuration(settings, outsideFirst.duration),
-        settings.blindspotRad
+        settings.blindspotRad,
+        roles.insideAircraft,
+        roles.outsideAircraft
       );
       let outsideTriggerTime = outsideFirst.endTime + settings.fixedWait;
       let insideTriggerTime = outsideTriggerTime;
@@ -1730,7 +1732,7 @@
         result: makeTriggeredRoute(optimumTriggerTime)
       };
       const blindspotReferenceTime = outsideFirst.endTime;
-      const blindspotEntry = findA1BlindspotEntryTime(
+      const blindspotEntry = findBlindspotEntryTime(
         (time) => {
           const outsideSegments = outsideFirstSegments.slice();
           appendLine(outsideSegments, outsideFirst.endTime, time, settings.speedNmPerSec);
@@ -1745,7 +1747,9 @@
         },
         blindspotReferenceTime,
         getEqualSpacingSearchDuration(settings, outsideFirst.duration),
-        settings.blindspotRad
+        settings.blindspotRad,
+        roles.insideAircraft,
+        roles.outsideAircraft
       );
 
       let insideTriggerTime = outsideFirst.endTime + settings.fixedWait;
@@ -1876,7 +1880,7 @@
         getEqualSpacingSearchDuration(settings, Math.max(outsideFirst.duration, insideTurnIn.duration))
       );
       const blindspotReferenceTime = Math.max(outsideFirst.endTime, insideTurnIn.endTime);
-      const blindspotEntry = findA1BlindspotEntryTime(
+      const blindspotEntry = findBlindspotEntryTime(
         (time) => mapRoleStates(
           roles,
           stateAfterTurnIn(outsideFirstSegments, outsideFirst.endTime, time),
@@ -1884,7 +1888,9 @@
         ),
         blindspotReferenceTime,
         getEqualSpacingSearchDuration(settings, Math.max(outsideFirst.duration, insideTurnIn.duration)),
-        settings.blindspotRad
+        settings.blindspotRad,
+        roles.insideAircraft,
+        roles.outsideAircraft
       );
 
       let returnTriggerTime = insideTurnIn.endTime + settings.fixedWait;
@@ -2680,7 +2686,7 @@
 
     function getFixedWaitLabel() {
       if (params.maneuverType === "unassisted") {
-        return "Wait after A1 turn";
+        return "Wait after outside turn";
       }
       if (params.maneuverType === "assisted") {
         return "Wait after A2 turn-in";
