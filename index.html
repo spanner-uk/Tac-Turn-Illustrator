@@ -295,8 +295,17 @@
       background: var(--soft);
     }
 
+    .segmented label {
+      position: relative;
+      min-width: 0;
+    }
+
     .segmented input {
       position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
       opacity: 0;
       pointer-events: none;
     }
@@ -2829,6 +2838,13 @@
       elapsed = clamp(elapsed, 0, route.totalTime);
       updateOutputs();
       draw();
+      resetPageScroll();
+    }
+
+    function resetPageScroll() {
+      if (typeof window.scrollTo === "function" && (window.scrollX !== 0 || window.scrollY !== 0)) {
+        window.scrollTo(0, 0);
+      }
     }
 
     function applyAircraftTurnPreset() {
