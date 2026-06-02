@@ -8,7 +8,7 @@ An interactive single-page tool for visualizing two-ship tactical turns, timing 
 
 Tac turns can be tricky and different doctrines are applied by different airforces / airframes. This is an attempt to show them all in one place so people can be clear about the technique they intend to employ so they can brief accurately and workshop whilst learning tac form maneuvers.
 
-It is also nicely illustrative how contract speed impacts visual cues and the pros and cons of the different turn types.
+It is nicely illustrative how contract speed, separation and turn amount impacts turn cues, and the pros and cons of the different turn types. Note, tac turns don't have to be precise. The optimum turn locations may not be conducive to typical rules of thumb, but hopefully you can apply your rules of thumb to this tool and see the impact of those decisions in different scenarios.
 
 ## Where's the 90?
 
@@ -27,7 +27,7 @@ Open `index.html` in a browser.
 
 No build step or server is required.
 
-Available here: https://github.com/spanner-uk/Tac-Turn-Illustrator
+Available here: https://spanner-uk.github.io/Tac-Turn-Illustrator/
 
 ## Notes
 
