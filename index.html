@@ -50,16 +50,20 @@
       margin: 0 auto;
       padding: 20px;
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
       gap: 16px;
       overflow: hidden;
     }
 
     .topbar {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       align-items: end;
-      justify-content: space-between;
-      gap: 20px;
+      gap: 12px 20px;
+    }
+
+    .headline {
+      min-width: 0;
     }
 
     h1 {
@@ -67,6 +71,76 @@
       font-size: clamp(1.2rem, 2vw, 1.8rem);
       line-height: 1.1;
       letter-spacing: 0;
+    }
+
+    .title-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .title-row h1 {
+      min-width: 0;
+    }
+
+    .info-button {
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--panel);
+      color: var(--focus);
+      font-size: 0.88rem;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(35, 47, 44, 0.08);
+    }
+
+    .info-button:hover,
+    .info-button:focus-visible {
+      border-color: var(--focus);
+      outline: none;
+    }
+
+    .info-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      z-index: 30;
+      width: min(430px, calc(100vw - 40px));
+      max-height: min(58vh, 420px);
+      overflow: auto;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .info-popover p {
+      margin: 0 0 12px;
+    }
+
+    .info-item {
+      margin-top: 7px;
+      font-weight: 800;
+    }
+
+    .info-pro {
+      color: #2e6f58;
+    }
+
+    .info-con {
+      color: #b42318;
     }
 
     .meta {
@@ -87,6 +161,28 @@
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.72);
       white-space: nowrap;
+    }
+
+    .segmented.tabs {
+      width: 100%;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      overflow: hidden;
+    }
+
+    .segmented.tabs label {
+      grid-column: span 2;
+      min-width: 0;
+    }
+
+    .segmented.tabs span {
+      white-space: nowrap;
+    }
+
+    .maneuver-nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
     }
 
     .time-card {
@@ -220,6 +316,10 @@
       opacity: 0.45;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     .toggle-row {
       display: flex;
       align-items: center;
@@ -295,6 +395,67 @@
 
     .legend-item:nth-child(2) {
       color: var(--a2);
+    }
+
+    .diagram-options {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .diagram-range {
+      width: 180px;
+      padding: 8px 10px 9px;
+      border: 1px solid rgba(216, 223, 220, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--ink);
+      font-size: 0.84rem;
+      font-weight: 800;
+      backdrop-filter: blur(8px);
+    }
+
+    .diagram-range-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .diagram-range input {
+      display: block;
+      width: 100%;
+      accent-color: var(--focus);
+    }
+
+    .diagram-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid rgba(216, 223, 220, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--ink);
+      font-size: 0.84rem;
+      font-weight: 800;
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .diagram-toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--focus);
     }
 
     .scrubber {
@@ -410,6 +571,13 @@
     @media (max-width: 560px) {
       .app {
         padding: 10px;
+        gap: 10px;
+      }
+
+      .tabs span {
+        min-height: 32px;
+        padding: 5px 6px;
+        font-size: 0.8rem;
       }
 
       .stage {
@@ -429,15 +597,35 @@
 </head>
 <body>
   <main class="app">
+    <nav class="maneuver-nav" aria-label="Maneuver type">
+      <div class="segmented tabs" role="tablist">
+        <label>
+          <input type="radio" name="maneuver" value="double" checked>
+          <span tabindex="0">Double assisted</span>
+        </label>
+        <label>
+          <input type="radio" name="maneuver" value="assisted">
+          <span tabindex="0">Assisted</span>
+        </label>
+        <label>
+          <input type="radio" name="maneuver" value="unassisted">
+          <span tabindex="0">Unassisted</span>
+        </label>
+      </div>
+    </nav>
+
     <header class="topbar">
-      <div>
-        <h1>Double Assisted Tactical Turn</h1>
+      <div class="headline">
+        <div class="title-row">
+          <h1 id="pageTitle">Double Assisted Tactical Turn</h1>
+          <button class="info-button" type="button" id="infoToggle" aria-label="Show maneuver information" aria-expanded="false" aria-controls="maneuverInfo" title="Maneuver information">i</button>
+          <div class="info-popover" id="maneuverInfo" role="tooltip" hidden></div>
+        </div>
         <div class="meta" aria-live="polite">
-          <span class="pill" id="triggerSummary">Trigger 0.0 s</span>
-          <span class="pill" id="durationSummary">Duration 0.0 s</span>
+          <span class="pill" id="turnTimeSummary">Turn time 0.0 s</span>
+          <span class="pill" id="blindspotTimeSummary">Time in blindspot 0.0 s</span>
           <span class="pill" id="radiusSummary">Radius 0.0 NM</span>
-          <span class="pill" id="completionSpacingSummary">Post-turn spacing 0.0 NM</span>
-          <span class="pill" id="equalSpacingSummary">Optimum wait 0.0 s after each first</span>
+          <span class="pill" id="completionSpacingSummary">Spacing 0.0 NM</span>
         </div>
       </div>
       <div class="time-card" aria-live="polite">
@@ -470,6 +658,32 @@
           </div>
         </div>
 
+        <div class="control-group" id="firstTurnGroup">
+          <div class="control-heading">First turn</div>
+          <div class="segmented mode" role="radiogroup" aria-label="First turn timing">
+            <label>
+              <input type="radio" name="firstStart" value="simultaneous" checked>
+              <span tabindex="0">Simultaneous</span>
+            </label>
+            <label>
+              <input type="radio" name="firstStart" value="outside-first">
+              <span tabindex="0" title="Inside aircraft's first turn begins after outside aircraft completes first turn (wings level)">Outside first</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="control-group" id="overturnGroup">
+          <div class="control-heading">
+            <label for="overturn">Overturn</label>
+            <output id="overturnValue" for="overturn">20 deg</output>
+          </div>
+          <input id="overturn" type="range" min="0" max="45" step="1" value="20">
+          <label class="toggle-row" for="overturnHalfAngle">
+            <span>Lock to 50% of turn angle</span>
+            <input id="overturnHalfAngle" type="checkbox">
+          </label>
+        </div>
+
         <div class="control-group">
           <div class="control-heading">
             <label for="separation">Separation</label>
@@ -487,41 +701,48 @@
         </div>
 
         <div class="control-group">
-          <div class="control-heading">Second turn</div>
+          <div class="control-heading" id="secondTurnHeading">Second turn</div>
           <div class="segmented mode" role="radiogroup" aria-label="Second turn trigger">
             <label>
-              <input type="radio" name="mode" value="cross" checked>
+              <input type="radio" name="mode" value="optimum" checked>
+              <span tabindex="0">Optimum</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="cross">
               <span tabindex="0">At crossing</span>
             </label>
             <label>
               <input type="radio" name="mode" value="fixed">
               <span tabindex="0">Fixed wait</span>
             </label>
-            <label>
-              <input type="radio" name="mode" value="optimum">
-              <span tabindex="0">Optimum</span>
-            </label>
           </div>
         </div>
 
         <div class="control-group" id="fixedWaitGroup">
           <div class="control-heading">
-            <label for="fixedWait">Wait after each first turn</label>
+            <label for="fixedWait" id="fixedWaitLabel">Wait after first turn completed</label>
             <output id="fixedWaitValue" for="fixedWait">3.0 s</output>
           </div>
           <input id="fixedWait" type="range" min="0" max="20" step="0.5" value="3">
         </div>
 
-        <div class="control-group">
-          <label class="toggle-row" for="showOptimum">
-            <span>Show optimum position</span>
-            <input id="showOptimum" type="checkbox" checked>
-          </label>
-        </div>
       </aside>
 
       <div class="stage" id="stage">
         <canvas id="plot" aria-label="Animated tactical turn plot"></canvas>
+        <div class="diagram-options">
+          <div class="diagram-range">
+            <div class="diagram-range-heading">
+              <label for="blindspotSize">Blindspot</label>
+              <output id="blindspotSizeValue" for="blindspotSize">30 deg</output>
+            </div>
+            <input id="blindspotSize" type="range" min="15" max="180" step="5" value="30">
+          </div>
+          <label class="diagram-toggle" for="showBlindspots">
+            <input id="showBlindspots" type="checkbox">
+            <span>Show blindspots</span>
+          </label>
+        </div>
         <div class="legend" aria-hidden="true">
           <span class="legend-item"><span class="swatch"></span>A1 outside</span>
           <span class="legend-item"><span class="swatch"></span>A2 inside</span>
@@ -539,32 +760,43 @@
   </main>
 
   <script>
-    const ASSIST_DEG = 20;
-    const ASSIST_RAD = radians(ASSIST_DEG);
-    const TURN_RADIUS_FACTOR = 0.7;
+    const BASE_TURN_SPEED_KTS = 420;
+    const BASE_TURN_RADIUS_NM = 0.7;
+    const MIN_TURN_RADIUS_NM = 0.08;
     const FINAL_LEAD_SECONDS = 8;
 
     const elements = {
       stage: document.getElementById("stage"),
       canvas: document.getElementById("plot"),
+      pageTitle: document.getElementById("pageTitle"),
+      infoToggle: document.getElementById("infoToggle"),
+      maneuverInfo: document.getElementById("maneuverInfo"),
       turnAngle: document.getElementById("turnAngle"),
       turnAngleValue: document.getElementById("turnAngleValue"),
+      firstTurnGroup: document.getElementById("firstTurnGroup"),
+      overturnGroup: document.getElementById("overturnGroup"),
+      overturn: document.getElementById("overturn"),
+      overturnValue: document.getElementById("overturnValue"),
+      overturnHalfAngle: document.getElementById("overturnHalfAngle"),
       separation: document.getElementById("separation"),
       separationValue: document.getElementById("separationValue"),
       speed: document.getElementById("speed"),
       speedValue: document.getElementById("speedValue"),
+      secondTurnHeading: document.getElementById("secondTurnHeading"),
       fixedWait: document.getElementById("fixedWait"),
+      fixedWaitLabel: document.getElementById("fixedWaitLabel"),
       fixedWaitValue: document.getElementById("fixedWaitValue"),
       fixedWaitGroup: document.getElementById("fixedWaitGroup"),
-      showOptimum: document.getElementById("showOptimum"),
       timeSlider: document.getElementById("timeSlider"),
       timeReadout: document.getElementById("timeReadout"),
+      blindspotSize: document.getElementById("blindspotSize"),
+      blindspotSizeValue: document.getElementById("blindspotSizeValue"),
+      showBlindspots: document.getElementById("showBlindspots"),
       elapsedLarge: document.getElementById("elapsedLarge"),
-      triggerSummary: document.getElementById("triggerSummary"),
-      durationSummary: document.getElementById("durationSummary"),
+      turnTimeSummary: document.getElementById("turnTimeSummary"),
+      blindspotTimeSummary: document.getElementById("blindspotTimeSummary"),
       radiusSummary: document.getElementById("radiusSummary"),
       completionSpacingSummary: document.getElementById("completionSpacingSummary"),
-      equalSpacingSummary: document.getElementById("equalSpacingSummary"),
       playPause: document.getElementById("playPause")
     };
 
@@ -572,6 +804,7 @@
     let params = readParams();
     let route = buildRoute(params);
     let elapsed = 0;
+    let activeTrigger = null;
     let playing = false;
     let lastFrameTime = 0;
     let viewport = { width: 1, height: 1, dpr: 1 };
@@ -620,20 +853,49 @@
       return `${value.toFixed(1)} NM`;
     }
 
+    function formatDegrees(value) {
+      return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)} deg`;
+    }
+
+    function normalizeRadians(value) {
+      const fullTurn = Math.PI * 2;
+      return ((value % fullTurn) + fullTurn) % fullTurn;
+    }
+
     function readParams() {
+      const maneuverInput = document.querySelector("input[name='maneuver']:checked");
+      const maneuverType = maneuverInput ? maneuverInput.value : "double";
       const directionInput = document.querySelector("input[name='direction']:checked");
+      const firstStartInput = document.querySelector("input[name='firstStart']:checked");
       const modeInput = document.querySelector("input[name='mode']:checked");
+      const angleMax = maneuverType === "unassisted" ? 90 : 70;
+      elements.turnAngle.max = String(angleMax);
+      let angleDeg = Number(elements.turnAngle.value);
+      if (angleDeg > angleMax) {
+        angleDeg = angleMax;
+        elements.turnAngle.value = String(angleMax);
+      }
+      const lockOverturnToHalf = elements.overturnHalfAngle.checked;
+      const overturnDeg = lockOverturnToHalf ? angleDeg / 2 : Number(elements.overturn.value);
+      const blindspotDeg = Number(elements.blindspotSize.value);
       return {
-        angleDeg: Number(elements.turnAngle.value),
-        angleRad: radians(Number(elements.turnAngle.value)),
+        maneuverType,
+        angleDeg,
+        angleRad: radians(angleDeg),
+        overturnDeg,
+        overturnRad: radians(overturnDeg),
+        lockOverturnToHalf,
         direction: directionInput ? directionInput.value : "left",
         sign: directionInput && directionInput.value === "right" ? -1 : 1,
         separation: Number(elements.separation.value),
         speedKts: Number(elements.speed.value),
         speedNmPerSec: Number(elements.speed.value) / 3600,
+        firstStartMode: firstStartInput ? firstStartInput.value : "simultaneous",
         mode: modeInput ? modeInput.value : "cross",
         fixedWait: Number(elements.fixedWait.value),
-        showOptimum: elements.showOptimum.checked
+        blindspotDeg,
+        blindspotRad: radians(blindspotDeg),
+        showBlindspots: elements.showBlindspots.checked
       };
     }
 
@@ -739,7 +1001,8 @@
       }
 
       let bracket = null;
-      const steps = 260;
+      const steps = clamp(Math.ceil(searchDuration / 0.25), 260, 5000);
+      const scanStep = searchDuration / steps;
       for (let index = 1; index <= steps; index += 1) {
         const delay = (searchDuration * index) / steps;
         const result = spacingAtDelay(delay);
@@ -775,13 +1038,26 @@
       }
 
       if (!bracket) {
+        const refined = refineNearestSpacingDelay(
+          spacingAtDelay,
+          targetSpacing,
+          Math.max(0, nearestDelay - scanStep),
+          Math.min(searchDuration, nearestDelay + scanStep)
+        );
+        if (Math.abs(refined.diff) <= tolerance) {
+          return {
+            available: true,
+            delayAfterFirstComplete: refined.delay,
+            result: refined.result
+          };
+        }
         return {
           available: false,
-          delayAfterFirstComplete: nearestDelay,
-          result: nearestResult,
-          nearest: nearestResult,
-          nearestDelay,
-          nearestDiff
+          delayAfterFirstComplete: refined.delay,
+          result: refined.result,
+          nearest: refined.result,
+          nearestDelay: refined.delay,
+          nearestDiff: refined.diff
         };
       }
 
@@ -817,29 +1093,131 @@
       };
     }
 
+    function refineNearestSpacingDelay(spacingAtDelay, targetSpacing, lowDelay, highDelay) {
+      let low = lowDelay;
+      let high = highDelay;
+
+      for (let index = 0; index < 36; index += 1) {
+        const left = low + (high - low) / 3;
+        const right = high - (high - low) / 3;
+        const leftResult = spacingAtDelay(left);
+        const rightResult = spacingAtDelay(right);
+        const leftDiff = Math.abs(leftResult.completionSpacing - targetSpacing);
+        const rightDiff = Math.abs(rightResult.completionSpacing - targetSpacing);
+
+        if (leftDiff <= rightDiff) {
+          high = right;
+        } else {
+          low = left;
+        }
+      }
+
+      const delay = (low + high) / 2;
+      const result = spacingAtDelay(delay);
+      return {
+        delay,
+        result,
+        diff: result.completionSpacing - targetSpacing
+      };
+    }
+
+    function getEqualSpacingSearchDuration(settings, referenceDuration) {
+      const spacingTime = settings.separation / Math.max(settings.speedNmPerSec, 0.0001);
+      return Math.max(30, referenceDuration * 8, spacingTime * 12);
+    }
+
+    function getTurnRadius(settings) {
+      const speedRatio = settings.speedKts / BASE_TURN_SPEED_KTS;
+      return Math.max(MIN_TURN_RADIUS_NM, BASE_TURN_RADIUS_NM * speedRatio * speedRatio);
+    }
+
+    function getUnassistedOptimumTriggerTime(settings) {
+      const halfAngle = Math.max(settings.angleRad / 2, 0.0001);
+      const spacingTime = settings.separation / Math.max(settings.speedNmPerSec, 0.0001);
+      return spacingTime / Math.tan(halfAngle);
+    }
+
+    function angularDistance(a, b) {
+      const diff = Math.abs(normalizeRadians(a - b));
+      return Math.min(diff, (Math.PI * 2) - diff);
+    }
+
+    function isInBlindspot(observer, target, coneAngle) {
+      const offset = sub(target.point, observer.point);
+      if (Math.hypot(offset.x, offset.y) < 0.0001) {
+        return false;
+      }
+      const bearing = Math.atan2(offset.y, offset.x);
+      const tailBearing = observer.heading + Math.PI;
+      return angularDistance(bearing, tailBearing) <= coneAngle / 2;
+    }
+
+    function computeBlindspotTime(a1Segments, a2Segments, maneuverEnd, speed, coneAngle) {
+      if (maneuverEnd <= 0) {
+        return 0;
+      }
+
+      const step = clamp(maneuverEnd / 900, 0.025, 0.1);
+      let total = 0;
+      for (let start = 0; start < maneuverEnd; start += step) {
+        const end = Math.min(maneuverEnd, start + step);
+        const time = (start + end) / 2;
+        const a1 = stateAt(a1Segments, time, speed);
+        const a2 = stateAt(a2Segments, time, speed);
+        if (isInBlindspot(a1, a2, coneAngle) || isInBlindspot(a2, a1, coneAngle)) {
+          total += end - start;
+        }
+      }
+      return total;
+    }
+
     function buildRoute(settings) {
-      const radius = Math.max(0.08, settings.separation * TURN_RADIUS_FACTOR);
+      if (settings.maneuverType === "unassisted") {
+        return buildUnassistedRoute(settings);
+      }
+      if (settings.maneuverType === "assisted") {
+        return buildAssistedRoute(settings);
+      }
+      return buildDoubleAssistedRoute(settings);
+    }
+
+    function buildDoubleAssistedRoute(settings) {
+      const radius = getTurnRadius(settings);
       const startHeading = 0;
       const a1Start = { x: 0, y: -settings.sign * settings.separation / 2 };
       const a2Start = { x: 0, y: settings.sign * settings.separation / 2 };
-      const a1FirstAngle = settings.angleRad + ASSIST_RAD;
-      const a2FirstAngle = ASSIST_RAD;
+      const overturnAngle = settings.overturnRad;
+      const a1FirstAngle = settings.angleRad + overturnAngle;
+      const a2FirstAngle = overturnAngle;
 
       const a1First = makeArc(0, a1Start, startHeading, settings.sign, a1FirstAngle, radius, settings.speedNmPerSec);
-      const a2First = makeArc(0, a2Start, startHeading, -settings.sign, a2FirstAngle, radius, settings.speedNmPerSec);
-      const a2AtA1First = stateAt([a2First, makeLine(a2First.endTime, a2First.endPoint, a2First.endHeading, a1First.endTime - a2First.endTime, settings.speedNmPerSec)], a1First.endTime, settings.speedNmPerSec);
+      const a2FirstStartTime = settings.firstStartMode === "outside-first" ? a1First.endTime : 0;
+      const a2FirstStartPoint = add(a2Start, scale(forward(startHeading), settings.speedNmPerSec * a2FirstStartTime));
+      const a2First = makeArc(a2FirstStartTime, a2FirstStartPoint, startHeading, -settings.sign, a2FirstAngle, radius, settings.speedNmPerSec);
+      const a1FirstSegments = [a1First];
+      const a2FirstSegments = a2FirstStartTime > 0
+        ? [makeLine(0, a2Start, startHeading, a2FirstStartTime, settings.speedNmPerSec), a2First]
+        : [a2First];
+
+      function stateAfterFirst(segments, firstEndTime, time) {
+        const tempSegments = segments.slice();
+        appendLine(tempSegments, firstEndTime, time, settings.speedNmPerSec);
+        return stateAt(tempSegments, time, settings.speedNmPerSec);
+      }
 
       function makeTriggeredRoute(a1TriggerTime, a2TriggerTime = a1TriggerTime) {
-        const a1Segments = [a1First];
-        appendLine(a1Segments, a1First.endTime, a1TriggerTime, settings.speedNmPerSec);
-        const a1AtTrigger = stateAt(a1Segments, a1TriggerTime, settings.speedNmPerSec);
-        const a1Second = makeArc(a1TriggerTime, a1AtTrigger.point, a1AtTrigger.heading, -settings.sign, ASSIST_RAD, radius, settings.speedNmPerSec);
+        const safeA1TriggerTime = Math.max(a1TriggerTime, a1First.endTime);
+        const safeA2TriggerTime = Math.max(a2TriggerTime, a2First.endTime);
+        const a1Segments = a1FirstSegments.slice();
+        appendLine(a1Segments, a1First.endTime, safeA1TriggerTime, settings.speedNmPerSec);
+        const a1AtTrigger = stateAt(a1Segments, safeA1TriggerTime, settings.speedNmPerSec);
+        const a1Second = makeArc(safeA1TriggerTime, a1AtTrigger.point, a1AtTrigger.heading, -settings.sign, overturnAngle, radius, settings.speedNmPerSec);
         a1Segments.push(a1Second);
 
-        const a2Segments = [a2First];
-        appendLine(a2Segments, a2First.endTime, a2TriggerTime, settings.speedNmPerSec);
-        const a2AtTrigger = stateAt(a2Segments, a2TriggerTime, settings.speedNmPerSec);
-        const a2Second = makeArc(a2TriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad + ASSIST_RAD, radius, settings.speedNmPerSec);
+        const a2Segments = a2FirstSegments.slice();
+        appendLine(a2Segments, a2First.endTime, safeA2TriggerTime, settings.speedNmPerSec);
+        const a2AtTrigger = stateAt(a2Segments, safeA2TriggerTime, settings.speedNmPerSec);
+        const a2Second = makeArc(safeA2TriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad + overturnAngle, radius, settings.speedNmPerSec);
         a2Segments.push(a2Second);
 
         const maneuverEnd = Math.max(a1Second.endTime, a2Second.endTime);
@@ -857,8 +1235,8 @@
           completionA1,
           completionA2,
           completionSpacing,
-          a1TriggerTime,
-          a2TriggerTime,
+          a1TriggerTime: safeA1TriggerTime,
+          a2TriggerTime: safeA2TriggerTime,
           triggerA1: a1AtTrigger.point,
           triggerA2: a2AtTrigger.point
         };
@@ -867,18 +1245,21 @@
       const equalSpacing = solveEqualSpacingDelay(
         (delay) => makeTriggeredRoute(a1First.endTime + delay, a2First.endTime + delay),
         settings.separation,
-        Math.max(30, a1First.duration * 8)
+        getEqualSpacingSearchDuration(settings, a1First.duration)
       );
       let a1TriggerTime = a1First.endTime + settings.fixedWait;
       let a2TriggerTime = a1TriggerTime;
       let crossing = null;
 
       if (settings.mode === "cross") {
-        crossing = solveLineIntersection(a1First.endPoint, a1First.endHeading, a2AtA1First.point, a2AtA1First.heading);
+        const crossingReferenceTime = Math.max(a1First.endTime, a2First.endTime);
+        const a1AtCrossingReference = stateAfterFirst(a1FirstSegments, a1First.endTime, crossingReferenceTime);
+        const a2AtCrossingReference = stateAfterFirst(a2FirstSegments, a2First.endTime, crossingReferenceTime);
+        crossing = solveLineIntersection(a1AtCrossingReference.point, a1AtCrossingReference.heading, a2AtCrossingReference.point, a2AtCrossingReference.heading);
         if (crossing && crossing.a1Distance >= 0) {
-          a1TriggerTime = a1First.endTime + crossing.a1Distance / settings.speedNmPerSec;
+          a1TriggerTime = crossingReferenceTime + crossing.a1Distance / settings.speedNmPerSec;
         } else {
-          a1TriggerTime = a1First.endTime;
+          a1TriggerTime = crossingReferenceTime;
         }
         a2TriggerTime = a1TriggerTime;
       } else if (settings.mode === "fixed") {
@@ -913,12 +1294,236 @@
         a2TriggerTime: selectedRoute.a2TriggerTime,
         firstTurnCompleteTime: a1First.endTime,
         a1FirstTurnCompleteTime: a1First.endTime,
+        a2FirstTurnStartTime: a2FirstStartTime,
         a2FirstTurnCompleteTime: a2First.endTime,
         totalTime,
         maneuverEnd,
         completionA1: selectedRoute.completionA1,
         completionA2: selectedRoute.completionA2,
         completionSpacing: selectedRoute.completionSpacing,
+        blindspotTime: computeBlindspotTime(a1Segments, a2Segments, maneuverEnd, settings.speedNmPerSec, settings.blindspotRad),
+        equalSpacing,
+        crossing,
+        samples
+      };
+    }
+
+    function buildUnassistedRoute(settings) {
+      const radius = getTurnRadius(settings);
+      const startHeading = 0;
+      const a1Start = { x: 0, y: -settings.sign * settings.separation / 2 };
+      const a2Start = { x: 0, y: settings.sign * settings.separation / 2 };
+
+      const a1First = makeArc(0, a1Start, startHeading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
+      const a1FirstSegments = [a1First];
+
+      function makeTriggeredRoute(a2TriggerTime) {
+        const safeA2TriggerTime = Math.max(0, a2TriggerTime);
+        const a1Segments = a1FirstSegments.slice();
+        appendLine(a1Segments, a1First.endTime, safeA2TriggerTime, settings.speedNmPerSec);
+        const a1AtTrigger = stateAt(a1Segments, safeA2TriggerTime, settings.speedNmPerSec);
+
+        const a2Segments = [makeLine(0, a2Start, startHeading, safeA2TriggerTime, settings.speedNmPerSec)];
+        const a2AtTrigger = stateAt(a2Segments, safeA2TriggerTime, settings.speedNmPerSec);
+        const a2Turn = makeArc(safeA2TriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
+        a2Segments.push(a2Turn);
+
+        const maneuverEnd = Math.max(a1First.endTime, a2Turn.endTime);
+        appendLine(a1Segments, Math.max(a1First.endTime, safeA2TriggerTime), maneuverEnd, settings.speedNmPerSec);
+        appendLine(a2Segments, a2Turn.endTime, maneuverEnd, settings.speedNmPerSec);
+
+        const completionA1 = stateAt(a1Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionA2 = stateAt(a2Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionSpacing = distance(completionA1, completionA2);
+
+        return {
+          a1Segments,
+          a2Segments,
+          maneuverEnd,
+          completionA1,
+          completionA2,
+          completionSpacing,
+          a1TriggerTime: safeA2TriggerTime,
+          a2TriggerTime: safeA2TriggerTime,
+          triggerA1: a1AtTrigger.point,
+          triggerA2: a2AtTrigger.point
+        };
+      }
+
+      const optimumTriggerTime = getUnassistedOptimumTriggerTime(settings);
+      const equalSpacing = {
+        available: true,
+        delayAfterFirstComplete: optimumTriggerTime,
+        result: makeTriggeredRoute(optimumTriggerTime)
+      };
+
+      let a2TriggerTime = a1First.endTime + settings.fixedWait;
+      let crossing = null;
+
+      if (settings.mode === "cross") {
+        const a2AtA1First = stateAt([makeLine(0, a2Start, startHeading, a1First.endTime, settings.speedNmPerSec)], a1First.endTime, settings.speedNmPerSec);
+        crossing = solveLineIntersection(a1First.endPoint, a1First.endHeading, a2AtA1First.point, startHeading);
+        if (crossing && crossing.a1Distance >= 0) {
+          a2TriggerTime = a1First.endTime + crossing.a1Distance / settings.speedNmPerSec;
+        } else {
+          a2TriggerTime = a1First.endTime;
+        }
+      } else if (settings.mode === "fixed") {
+        a2TriggerTime = a1First.endTime + settings.fixedWait;
+      } else if (settings.mode === "optimum") {
+        a2TriggerTime = equalSpacing.delayAfterFirstComplete;
+      }
+
+      const selectedRoute = makeTriggeredRoute(a2TriggerTime);
+      const a1Segments = selectedRoute.a1Segments;
+      const a2Segments = selectedRoute.a2Segments;
+      const maneuverEnd = selectedRoute.maneuverEnd;
+      const totalTime = maneuverEnd + FINAL_LEAD_SECONDS;
+      appendLine(a1Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+      appendLine(a2Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+
+      const samples = {
+        a1: sampleSegments(a1Segments, totalTime, settings.speedNmPerSec),
+        a2: sampleSegments(a2Segments, totalTime, settings.speedNmPerSec)
+      };
+
+      return {
+        radius,
+        a1Segments,
+        a2Segments,
+        a1Start,
+        a2Start,
+        a1TriggerTime: selectedRoute.a1TriggerTime,
+        a2TriggerTime: selectedRoute.a2TriggerTime,
+        firstTurnCompleteTime: a1First.endTime,
+        a1FirstTurnCompleteTime: a1First.endTime,
+        a2FirstTurnStartTime: 0,
+        a2FirstTurnCompleteTime: 0,
+        totalTime,
+        maneuverEnd,
+        completionA1: selectedRoute.completionA1,
+        completionA2: selectedRoute.completionA2,
+        completionSpacing: selectedRoute.completionSpacing,
+        blindspotTime: computeBlindspotTime(a1Segments, a2Segments, maneuverEnd, settings.speedNmPerSec, settings.blindspotRad),
+        equalSpacing,
+        crossing,
+        samples
+      };
+    }
+
+    function buildAssistedRoute(settings) {
+      const radius = getTurnRadius(settings);
+      const startHeading = 0;
+      const a1Start = { x: 0, y: -settings.sign * settings.separation / 2 };
+      const a2Start = { x: 0, y: settings.sign * settings.separation / 2 };
+      const crossingAngle = settings.overturnRad;
+      const returnAngle = settings.angleRad + crossingAngle;
+
+      const a1First = makeArc(0, a1Start, startHeading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
+      const a2TurnInStartPoint = add(a2Start, scale(forward(startHeading), settings.speedNmPerSec * a1First.endTime));
+      const a2TurnIn = makeArc(a1First.endTime, a2TurnInStartPoint, startHeading, -settings.sign, crossingAngle, radius, settings.speedNmPerSec);
+      const a1FirstSegments = [a1First];
+      const a2TurnInSegments = [
+        makeLine(0, a2Start, startHeading, a1First.endTime, settings.speedNmPerSec),
+        a2TurnIn
+      ];
+
+      function stateAfterTurnIn(segments, firstEndTime, time) {
+        const tempSegments = segments.slice();
+        appendLine(tempSegments, firstEndTime, time, settings.speedNmPerSec);
+        return stateAt(tempSegments, time, settings.speedNmPerSec);
+      }
+
+      function makeTriggeredRoute(returnTriggerTime) {
+        const safeReturnTriggerTime = Math.max(returnTriggerTime, a2TurnIn.endTime);
+        const a1Segments = a1FirstSegments.slice();
+        appendLine(a1Segments, a1First.endTime, safeReturnTriggerTime, settings.speedNmPerSec);
+        const a1AtTrigger = stateAt(a1Segments, safeReturnTriggerTime, settings.speedNmPerSec);
+
+        const a2Segments = a2TurnInSegments.slice();
+        appendLine(a2Segments, a2TurnIn.endTime, safeReturnTriggerTime, settings.speedNmPerSec);
+        const a2AtTrigger = stateAt(a2Segments, safeReturnTriggerTime, settings.speedNmPerSec);
+        const a2Return = makeArc(safeReturnTriggerTime, a2AtTrigger.point, a2AtTrigger.heading, settings.sign, returnAngle, radius, settings.speedNmPerSec);
+        a2Segments.push(a2Return);
+
+        const maneuverEnd = Math.max(a1First.endTime, a2Return.endTime);
+        appendLine(a1Segments, safeReturnTriggerTime, maneuverEnd, settings.speedNmPerSec);
+        appendLine(a2Segments, a2Return.endTime, maneuverEnd, settings.speedNmPerSec);
+
+        const completionA1 = stateAt(a1Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionA2 = stateAt(a2Segments, maneuverEnd, settings.speedNmPerSec).point;
+        const completionSpacing = distance(completionA1, completionA2);
+
+        return {
+          a1Segments,
+          a2Segments,
+          maneuverEnd,
+          completionA1,
+          completionA2,
+          completionSpacing,
+          a1TriggerTime: safeReturnTriggerTime,
+          a2TriggerTime: safeReturnTriggerTime,
+          triggerA1: a1AtTrigger.point,
+          triggerA2: a2AtTrigger.point
+        };
+      }
+
+      const equalSpacing = solveEqualSpacingDelay(
+        (delay) => makeTriggeredRoute(a2TurnIn.endTime + delay),
+        settings.separation,
+        getEqualSpacingSearchDuration(settings, Math.max(a1First.duration, a2TurnIn.duration))
+      );
+
+      let returnTriggerTime = a2TurnIn.endTime + settings.fixedWait;
+      let crossing = null;
+
+      if (settings.mode === "cross") {
+        const crossingReferenceTime = Math.max(a1First.endTime, a2TurnIn.endTime);
+        const a1AtCrossingReference = stateAfterTurnIn(a1FirstSegments, a1First.endTime, crossingReferenceTime);
+        const a2AtCrossingReference = stateAfterTurnIn(a2TurnInSegments, a2TurnIn.endTime, crossingReferenceTime);
+        crossing = solveLineIntersection(a1AtCrossingReference.point, a1AtCrossingReference.heading, a2AtCrossingReference.point, a2AtCrossingReference.heading);
+        if (crossing && crossing.a1Distance >= 0) {
+          returnTriggerTime = crossingReferenceTime + crossing.a1Distance / settings.speedNmPerSec;
+        } else {
+          returnTriggerTime = crossingReferenceTime;
+        }
+      } else if (settings.mode === "fixed") {
+        returnTriggerTime = a2TurnIn.endTime + settings.fixedWait;
+      } else if (settings.mode === "optimum") {
+        returnTriggerTime = a2TurnIn.endTime + equalSpacing.delayAfterFirstComplete;
+      }
+
+      const selectedRoute = makeTriggeredRoute(returnTriggerTime);
+      const a1Segments = selectedRoute.a1Segments;
+      const a2Segments = selectedRoute.a2Segments;
+      const maneuverEnd = selectedRoute.maneuverEnd;
+      const totalTime = maneuverEnd + FINAL_LEAD_SECONDS;
+      appendLine(a1Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+      appendLine(a2Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+
+      const samples = {
+        a1: sampleSegments(a1Segments, totalTime, settings.speedNmPerSec),
+        a2: sampleSegments(a2Segments, totalTime, settings.speedNmPerSec)
+      };
+
+      return {
+        radius,
+        a1Segments,
+        a2Segments,
+        a1Start,
+        a2Start,
+        a1TriggerTime: selectedRoute.a1TriggerTime,
+        a2TriggerTime: selectedRoute.a2TriggerTime,
+        firstTurnCompleteTime: a1First.endTime,
+        a1FirstTurnCompleteTime: a1First.endTime,
+        a2FirstTurnStartTime: a2TurnIn.startTime,
+        a2FirstTurnCompleteTime: a2TurnIn.endTime,
+        totalTime,
+        maneuverEnd,
+        completionA1: selectedRoute.completionA1,
+        completionA2: selectedRoute.completionA2,
+        completionSpacing: selectedRoute.completionSpacing,
+        blindspotTime: computeBlindspotTime(a1Segments, a2Segments, maneuverEnd, settings.speedNmPerSec, settings.blindspotRad),
         equalSpacing,
         crossing,
         samples
@@ -1010,18 +1615,50 @@
       const transform = makeTransform();
       drawGrid(transform);
       drawInitialSeparation(transform);
+      if (params.showBlindspots) {
+        drawBlindspots(transform);
+      }
       drawAircraftPath(route.samples.a1, elapsed, "var(--a1)", "rgba(217, 95, 67, 0.28)", transform);
       drawAircraftPath(route.samples.a2, elapsed, "var(--a2)", "rgba(31, 122, 140, 0.28)", transform);
       drawTriggerMarkers(transform);
       drawCompletionSpacing(transform);
-      if (params.showOptimum) {
-        drawEqualSpacingReference(transform);
-      }
 
       const a1 = stateAt(route.a1Segments, elapsed, params.speedNmPerSec);
       const a2 = stateAt(route.a2Segments, elapsed, params.speedNmPerSec);
       drawAircraft(a1.point, a1.heading, "#d95f43", "A1", transform);
       drawAircraft(a2.point, a2.heading, "#1f7a8c", "A2", transform);
+    }
+
+    function drawBlindspots(transform) {
+      const range = Math.max(0.8, params.separation * 1.35, route.radius * 1.7);
+      const a1 = stateAt(route.a1Segments, elapsed, params.speedNmPerSec);
+      const a2 = stateAt(route.a2Segments, elapsed, params.speedNmPerSec);
+      drawBlindspotCone(a1.point, a1.heading, range, "rgba(217, 95, 67, 0.14)", "rgba(217, 95, 67, 0.28)", transform);
+      drawBlindspotCone(a2.point, a2.heading, range, "rgba(31, 122, 140, 0.14)", "rgba(31, 122, 140, 0.28)", transform);
+    }
+
+    function drawBlindspotCone(point, heading, range, fillColor, strokeColor, transform) {
+      const center = transform.toScreen(point);
+      const tailHeading = heading + Math.PI;
+      const halfCone = params.blindspotRad / 2;
+      const steps = 12;
+
+      ctx.save();
+      ctx.fillStyle = fillColor;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(center.x, center.y);
+      for (let index = 0; index <= steps; index += 1) {
+        const amount = index / steps;
+        const coneHeading = tailHeading - halfCone + params.blindspotRad * amount;
+        const edge = transform.toScreen(add(point, scale(forward(coneHeading), range)));
+        ctx.lineTo(edge.x, edge.y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
 
     function cssColor(value) {
@@ -1124,31 +1761,153 @@
     }
 
     function drawTriggerMarkers(transform) {
-      const a1 = stateAt(route.a1Segments, route.a1TriggerTime, params.speedNmPerSec);
-      const a2 = stateAt(route.a2Segments, route.a2TriggerTime, params.speedNmPerSec);
-      const sameTrigger = Math.abs(route.a1TriggerTime - route.a2TriggerTime) < 0.05;
+      const markers = getTriggerSnapshots();
+      const drawnTimes = [];
+
+      markers.forEach((item) => {
+        const duplicateLine = drawnTimes.some((time) => Math.abs(time - item.time) < 0.05);
+        drawTriggerSnapshot(item, transform, duplicateLine);
+        drawnTimes.push(item.time);
+      });
+    }
+
+    function getTriggerSnapshots() {
+      const a1AtA1Trigger = stateAt(route.a1Segments, route.a1TriggerTime, params.speedNmPerSec);
+      const a2AtA1Trigger = stateAt(route.a2Segments, route.a1TriggerTime, params.speedNmPerSec);
+      const a2AtA2Trigger = stateAt(route.a2Segments, route.a2TriggerTime, params.speedNmPerSec);
+      const a1AtA2Trigger = stateAt(route.a1Segments, route.a2TriggerTime, params.speedNmPerSec);
+      const insideFirstCue = getInsideFirstTurnCueSnapshot();
+      const insideTurnMarker = {
+        id: "a2",
+        trigger: a2AtA2Trigger,
+        ghost: a1AtA2Trigger,
+        triggerLabel: "",
+        ghostLabel: "",
+        ghostColor: "#d95f43",
+        time: route.a2TriggerTime
+      };
+
+      if (params.maneuverType === "assisted" || params.maneuverType === "unassisted") {
+        return params.maneuverType === "assisted" && insideFirstCue
+          ? [insideFirstCue, insideTurnMarker]
+          : [insideTurnMarker];
+      }
+      const markers = [
+        {
+          id: "a1",
+          trigger: a1AtA1Trigger,
+          ghost: a2AtA1Trigger,
+          triggerLabel: "",
+          ghostLabel: "",
+          ghostColor: "#1f7a8c",
+          time: route.a1TriggerTime
+        },
+        insideTurnMarker
+      ];
+      if (insideFirstCue && params.firstStartMode === "outside-first") {
+        markers.unshift(insideFirstCue);
+      }
+      return markers;
+    }
+
+    function getInsideFirstTurnCueSnapshot() {
+      if (typeof route.a2FirstTurnStartTime !== "number" || route.a2FirstTurnStartTime <= 0.0001) {
+        return null;
+      }
+      const a2AtCue = stateAt(route.a2Segments, route.a2FirstTurnStartTime, params.speedNmPerSec);
+      const a1AtCue = stateAt(route.a1Segments, route.a2FirstTurnStartTime, params.speedNmPerSec);
+      return {
+        id: "a2-first",
+        trigger: a2AtCue,
+        ghost: a1AtCue,
+        triggerLabel: "",
+        ghostLabel: "",
+        ghostColor: "#d95f43",
+        cueText: "Cue: A1 levels wings",
+        time: route.a2FirstTurnStartTime
+      };
+    }
+
+    function drawTriggerSnapshot(item, transform, duplicateLine) {
+      const triggerPoint = transform.toScreen(item.trigger.point);
+      const ghostPoint = transform.toScreen(item.ghost.point);
+      const active = activeTrigger === item.id;
+      const triggerColor = item.id === "a1" ? "#d95f43" : "#2e6f58";
+
       ctx.save();
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = "#8b817a";
-      [
-        { point: a1.point, label: sameTrigger ? "Trigger" : "A1 trigger" },
-        { point: a2.point, label: sameTrigger ? "" : "A2 trigger" }
-      ].forEach((item) => {
-        const point = item.point;
-        const p = transform.toScreen(point);
+      ctx.lineWidth = active ? 2.5 : 1.5;
+      ctx.strokeStyle = triggerColor;
+      ctx.fillStyle = "#645c57";
+      if (!duplicateLine || active) {
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+        ctx.moveTo(triggerPoint.x, triggerPoint.y);
+        ctx.lineTo(ghostPoint.x, ghostPoint.y);
         ctx.stroke();
-        if (item.label) {
-          ctx.setLineDash([]);
-          ctx.fillStyle = "#645c57";
-          ctx.font = "700 12px Inter, system-ui, sans-serif";
-          ctx.textAlign = "left";
-          ctx.textBaseline = "bottom";
-          ctx.fillText(item.label, p.x + 10, p.y - 8);
-          ctx.setLineDash([5, 5]);
-        }
+      }
+
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(triggerPoint.x, triggerPoint.y, active ? 10 : 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.restore();
+
+      if (active) {
+        drawTriggerDistanceLabel(
+          triggerPoint,
+          ghostPoint,
+          distance(item.trigger.point, item.ghost.point),
+          getClockCue(item),
+          item.cueText || "",
+          triggerColor
+        );
+      }
+
+      drawGhostAircraft(item.ghost.point, item.ghost.heading, item.ghostColor, item.ghostLabel, transform);
+    }
+
+    function getClockCue(item) {
+      const vector = sub(item.ghost.point, item.trigger.point);
+      const bearing = Math.atan2(vector.y, vector.x);
+      const relativeClockwise = normalizeRadians(item.trigger.heading - bearing);
+      const clockIndex = Math.round(relativeClockwise / (Math.PI / 6)) % 12;
+      const clockPoint = clockIndex === 0 ? 12 : clockIndex;
+      return `${clockPoint} o'clock`;
+    }
+
+    function drawTriggerDistanceLabel(triggerPoint, ghostPoint, spacing, clockCue, cueText, labelColor) {
+      const mid = {
+        x: (triggerPoint.x + ghostPoint.x) / 2,
+        y: (triggerPoint.y + ghostPoint.y) / 2
+      };
+      const labels = [formatNm(spacing), clockCue];
+      if (cueText) {
+        labels.push(cueText);
+      }
+
+      ctx.save();
+      ctx.font = "800 12px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const metrics = labels.map((label) => ctx.measureText(label).width);
+      const boxWidth = Math.max(...metrics) + 18;
+      const lineHeight = 16;
+      const boxHeight = labels.length * lineHeight + 11;
+      const labelX = clamp(mid.x, boxWidth / 2 + 8, viewport.width - boxWidth / 2 - 8);
+      const labelY = clamp(mid.y - 18, boxHeight / 2 + 8, viewport.height - boxHeight / 2 - 8);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+      ctx.strokeStyle = "#2e6f58";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(labelX - boxWidth / 2, labelY - boxHeight / 2, boxWidth, boxHeight, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = labelColor;
+      const firstLineY = labelY - ((labels.length - 1) * lineHeight) / 2;
+      labels.forEach((label, index) => {
+        ctx.fillText(label, labelX, firstLineY + index * lineHeight);
       });
       ctx.restore();
     }
@@ -1160,7 +1919,7 @@
         x: (p1.x + p2.x) / 2,
         y: (p1.y + p2.y) / 2
       };
-      const label = `Post-turn ${formatNm(route.completionSpacing)}`;
+      const label = formatNm(route.completionSpacing);
 
       ctx.save();
       ctx.strokeStyle = "#2f3a36";
@@ -1194,66 +1953,6 @@
       ctx.fillStyle = "#2f3a36";
       ctx.fillText(label, mid.x, labelY);
       ctx.restore();
-    }
-
-    function drawEqualSpacingReference(transform) {
-      if (!route.equalSpacing.result) {
-        return;
-      }
-
-      const p1 = transform.toScreen(route.equalSpacing.result.triggerA1);
-      const p2 = transform.toScreen(route.equalSpacing.result.triggerA2);
-      const mid = {
-        x: (p1.x + p2.x) / 2,
-        y: (p1.y + p2.y) / 2
-      };
-      const waitLabel = route.equalSpacing.available
-        ? `Optimum +${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`
-        : `Closest +${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`;
-
-      ctx.save();
-      ctx.strokeStyle = "#2e6f58";
-      ctx.fillStyle = "#ffffff";
-      ctx.lineWidth = 2;
-
-      drawDiamond(p1.x, p1.y, 8);
-      drawDiamond(p2.x, p2.y, 8);
-      ctx.fillStyle = "#2e6f58";
-      ctx.font = "800 11px Inter, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
-      ctx.fillText("A1", p1.x, p1.y - 12);
-      ctx.fillText("A2", p2.x, p2.y - 12);
-
-      ctx.font = "800 12px Inter, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const metrics = ctx.measureText(waitLabel);
-      const boxWidth = metrics.width + 18;
-      const boxHeight = 25;
-      const labelY = mid.y + 20;
-      const labelX = clamp(mid.x, boxWidth / 2 + 8, viewport.width - boxWidth / 2 - 8);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
-      ctx.strokeStyle = "#2e6f58";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(labelX - boxWidth / 2, labelY - boxHeight / 2, boxWidth, boxHeight, 6);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#2e6f58";
-      ctx.fillText(waitLabel, labelX, labelY);
-      ctx.restore();
-    }
-
-    function drawDiamond(x, y, radius) {
-      ctx.beginPath();
-      ctx.moveTo(x, y - radius);
-      ctx.lineTo(x + radius, y);
-      ctx.lineTo(x, y + radius);
-      ctx.lineTo(x - radius, y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
     }
 
     function drawAircraftPath(points, splitTime, pastColor, futureColor, transform) {
@@ -1317,6 +2016,48 @@
       ctx.restore();
     }
 
+    function drawGhostAircraft(point, heading, color, label, transform) {
+      const p = transform.toScreen(point);
+      const angle = -heading;
+      const length = 30;
+      const width = 16;
+      const tail = 12;
+      const shape = [
+        { x: length / 2, y: 0 },
+        { x: -tail, y: width / 2 },
+        { x: -tail / 2, y: 0 },
+        { x: -tail, y: -width / 2 }
+      ];
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(angle);
+      ctx.globalAlpha = 0.38;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      shape.forEach((vertex, index) => {
+        if (index === 0) {
+          ctx.moveTo(vertex.x, vertex.y);
+        } else {
+          ctx.lineTo(vertex.x, vertex.y);
+        }
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      if (label) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.72;
+        ctx.font = "800 11px Inter, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, p.x, p.y + 24);
+        ctx.restore();
+      }
+    }
+
     function drawAircraft(point, heading, color, label, transform) {
       const p = transform.toScreen(point);
       const angle = -heading;
@@ -1359,26 +2100,137 @@
     }
 
     function updateOutputs() {
-      elements.turnAngleValue.value = `${params.angleDeg.toFixed(0)} deg`;
+      elements.pageTitle.textContent = getManeuverTitle();
+      updateManeuverInfo();
+      elements.secondTurnHeading.textContent = getSecondTurnHeading();
+      elements.turnAngleValue.value = formatDegrees(params.angleDeg);
+      elements.overturnValue.value = formatDegrees(params.overturnDeg);
       elements.separationValue.value = formatNm(params.separation);
       elements.speedValue.value = `${params.speedKts.toFixed(0)} kt`;
       elements.fixedWaitValue.value = formatSeconds(params.fixedWait);
+      elements.blindspotSizeValue.value = formatDegrees(params.blindspotDeg);
       elements.timeSlider.max = route.totalTime.toFixed(1);
       elements.timeSlider.value = elapsed.toFixed(1);
       elements.timeReadout.value = `${elapsed.toFixed(1)} / ${route.totalTime.toFixed(1)} s`;
       elements.elapsedLarge.textContent = formatSeconds(elapsed);
-      elements.triggerSummary.textContent = Math.abs(route.a1TriggerTime - route.a2TriggerTime) < 0.05
-        ? `Trigger ${route.a1TriggerTime.toFixed(1)} s`
-        : `Trigger A1 ${route.a1TriggerTime.toFixed(1)} s / A2 ${route.a2TriggerTime.toFixed(1)} s`;
-      elements.durationSummary.textContent = `Duration ${route.totalTime.toFixed(1)} s`;
+      elements.turnTimeSummary.textContent = `Turn time ${route.maneuverEnd.toFixed(1)} s`;
+      elements.blindspotTimeSummary.textContent = `Time in blindspot ${formatSeconds(route.blindspotTime)}`;
       elements.radiusSummary.textContent = `Radius ${route.radius.toFixed(2)} NM`;
-      elements.completionSpacingSummary.textContent = `Post-turn spacing ${formatNm(route.completionSpacing)}`;
-      elements.equalSpacingSummary.textContent = route.equalSpacing.available
-        ? `Optimum wait ${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`
-        : `Closest wait ${route.equalSpacing.delayAfterFirstComplete.toFixed(1)} s after each first`;
+      elements.completionSpacingSummary.textContent = `Spacing ${formatNm(route.completionSpacing)}`;
+      elements.firstTurnGroup.hidden = params.maneuverType !== "double";
+      elements.overturnGroup.hidden = params.maneuverType === "unassisted";
+      elements.overturn.disabled = params.lockOverturnToHalf;
+      elements.fixedWaitLabel.textContent = getFixedWaitLabel();
       const fixed = params.mode === "fixed";
       elements.fixedWait.disabled = !fixed;
       elements.fixedWaitGroup.classList.toggle("disabled", !fixed);
+    }
+
+    function getManeuverTitle() {
+      if (params.maneuverType === "unassisted") {
+        return "Unassisted Tactical Turn";
+      }
+      if (params.maneuverType === "assisted") {
+        return "Assisted Tactical Turn";
+      }
+      return "Double Assisted Tactical Turn";
+    }
+
+    function getSecondTurnHeading() {
+      if (params.maneuverType === "unassisted") {
+        return "Inside turn";
+      }
+      if (params.maneuverType === "assisted") {
+        return "Return turn";
+      }
+      return "Second turn";
+    }
+
+    function getFixedWaitLabel() {
+      if (params.maneuverType === "unassisted") {
+        return "Wait after A1 turn";
+      }
+      if (params.maneuverType === "assisted") {
+        return "Wait after A2 turn-in";
+      }
+      return "Wait after first turn completed";
+    }
+
+    function getManeuverInfo() {
+      if (params.maneuverType === "unassisted") {
+        return {
+          description: [
+            "Outside aircraft turns onto heading. Inside aircraft turns onto heading."
+          ],
+          pros: [
+            "Very easy",
+            "Reliable 90 degree turn using crossing visual cues.",
+            "Both aircraft traverse the same distance."
+          ],
+          cons: [
+            "Takes more time and more space, especially at shallower turn angles."
+          ]
+        };
+      }
+      if (params.maneuverType === "assisted") {
+        return {
+          description: [
+            "Outside aircraft makes the turn. Inside aircraft waits for outside aircraft's turn to complete (wings level) and turns across the front, then turns back to roll out on final heading."
+          ],
+          pros: [
+            "Easy for outside aircraft."
+          ],
+          cons: [
+            "Inside aircraft travels further and will fall behind slightly if speed is maintained.",
+            "Takes a little longer."
+          ]
+        };
+      }
+      return {
+        description: [
+          "Both aircraft turn in to each other. Outside aircraft overturns beyond the final heading. Inside aircraft turns by the overturn amount."
+        ],
+        pros: [
+          "Same distance travelled.",
+          "Fast (maintain visual cross cover, less space needed)"
+        ],
+        cons: [
+          "More complex"
+        ]
+      };
+    }
+
+    function updateManeuverInfo() {
+      const info = getManeuverInfo();
+      const nodes = [];
+
+      info.description.forEach((text) => {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = text;
+        nodes.push(paragraph);
+      });
+
+      info.pros.forEach((text) => {
+        nodes.push(makeInfoItem("+", text, "info-pro"));
+      });
+
+      info.cons.forEach((text) => {
+        nodes.push(makeInfoItem("-", text, "info-con"));
+      });
+
+      elements.maneuverInfo.replaceChildren(...nodes);
+    }
+
+    function makeInfoItem(prefix, text, className) {
+      const item = document.createElement("div");
+      item.className = `info-item ${className}`;
+      item.textContent = `${prefix} ${text}`;
+      return item;
+    }
+
+    function setInfoOpen(open) {
+      elements.maneuverInfo.hidden = !open;
+      elements.infoToggle.setAttribute("aria-expanded", open ? "true" : "false");
     }
 
     function rebuild() {
@@ -1423,16 +2275,53 @@
       requestAnimationFrame(tick);
     }
 
+    function handleCanvasClick(event) {
+      const hit = findTriggerHit(event);
+      activeTrigger = hit ? hit.id : null;
+      draw();
+    }
+
+    function handleCanvasMove(event) {
+      elements.canvas.style.cursor = findTriggerHit(event) ? "pointer" : "default";
+    }
+
+    function findTriggerHit(event) {
+      if (!route || viewport.width <= 1) {
+        return null;
+      }
+
+      const rect = elements.canvas.getBoundingClientRect();
+      const point = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+      const transform = makeTransform();
+      const markers = getTriggerSnapshots();
+      let best = null;
+      let bestDistance = Infinity;
+
+      markers.forEach((marker) => {
+        const screen = transform.toScreen(marker.trigger.point);
+        const gap = Math.hypot(point.x - screen.x, point.y - screen.y);
+        if (gap < bestDistance) {
+          best = marker;
+          bestDistance = gap;
+        }
+      });
+
+      return bestDistance <= 16 ? best : null;
+    }
+
     function wireControls() {
-      [elements.turnAngle, elements.separation, elements.speed, elements.fixedWait].forEach((control) => {
+      [elements.turnAngle, elements.overturn, elements.separation, elements.speed, elements.fixedWait].forEach((control) => {
         control.addEventListener("input", rebuild);
       });
 
-      document.querySelectorAll("input[name='direction'], input[name='mode']").forEach((control) => {
+      elements.overturnHalfAngle.addEventListener("change", rebuild);
+
+      document.querySelectorAll("input[name='maneuver'], input[name='direction'], input[name='firstStart'], input[name='mode']").forEach((control) => {
         control.addEventListener("change", rebuild);
       });
-
-      elements.showOptimum.addEventListener("change", rebuild);
 
       document.querySelectorAll(".segmented span").forEach((span) => {
         span.addEventListener("keydown", (event) => {
@@ -1446,6 +2335,35 @@
 
       elements.timeSlider.addEventListener("input", () => {
         setElapsed(Number(elements.timeSlider.value));
+      });
+
+      elements.blindspotSize.addEventListener("input", rebuild);
+      elements.showBlindspots.addEventListener("change", rebuild);
+
+      elements.canvas.addEventListener("click", handleCanvasClick);
+      elements.canvas.addEventListener("mousemove", handleCanvasMove);
+      elements.canvas.addEventListener("mouseleave", () => {
+        elements.canvas.style.cursor = "default";
+      });
+
+      elements.infoToggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        setInfoOpen(elements.infoToggle.getAttribute("aria-expanded") !== "true");
+      });
+
+      elements.maneuverInfo.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+
+      document.addEventListener("click", () => {
+        setInfoOpen(false);
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          setInfoOpen(false);
+          elements.infoToggle.blur();
+        }
       });
 
       elements.playPause.addEventListener("click", () => {
