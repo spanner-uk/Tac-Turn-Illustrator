@@ -165,13 +165,17 @@
 
     .segmented.tabs {
       width: 100%;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(12, minmax(0, 1fr));
       overflow: hidden;
     }
 
     .segmented.tabs label {
-      grid-column: span 2;
+      grid-column: span 4;
       min-width: 0;
+    }
+
+    .segmented.tabs.secondary-tabs label {
+      grid-column: span 3;
     }
 
     .segmented.tabs span {
@@ -182,6 +186,8 @@
       position: sticky;
       top: 0;
       z-index: 10;
+      display: grid;
+      gap: 8px;
       background: var(--bg);
     }
 
@@ -612,6 +618,24 @@
           <span tabindex="0">Unassisted</span>
         </label>
       </div>
+      <div class="segmented tabs secondary-tabs" role="tablist">
+        <label>
+          <input type="radio" name="maneuver" value="hook">
+          <span tabindex="0">Hook</span>
+        </label>
+        <label>
+          <input type="radio" name="maneuver" value="cross180">
+          <span tabindex="0">Cross</span>
+        </label>
+        <label>
+          <input type="radio" name="maneuver" value="check">
+          <span tabindex="0">Check</span>
+        </label>
+        <label>
+          <input type="radio" name="maneuver" value="shackle">
+          <span tabindex="0">Shackle</span>
+        </label>
+      </div>
     </nav>
 
     <header class="topbar">
@@ -636,7 +660,7 @@
 
     <section class="workspace">
       <aside class="controls" aria-label="Maneuver controls">
-        <div class="control-group">
+        <div class="control-group" id="turnAngleGroup">
           <div class="control-heading">
             <label for="turnAngle">Turn angle</label>
             <output id="turnAngleValue" for="turnAngle">45 deg</output>
@@ -644,7 +668,7 @@
           <input id="turnAngle" type="range" min="20" max="70" step="1" value="45">
         </div>
 
-        <div class="control-group">
+        <div class="control-group" id="directionGroup">
           <div class="control-heading">Direction</div>
           <div class="segmented" role="radiogroup" aria-label="Turn direction">
             <label>
@@ -684,9 +708,9 @@
           </label>
         </div>
 
-        <div class="control-group">
+        <div class="control-group" id="separationGroup">
           <div class="control-heading">
-            <label for="separation">Separation</label>
+            <label for="separation">Spacing</label>
             <output id="separationValue" for="separation">1.0 NM</output>
           </div>
           <input id="separation" type="range" min="0.5" max="5" step="0.1" value="1">
@@ -700,7 +724,7 @@
           <input id="speed" type="range" min="180" max="600" step="10" value="420">
         </div>
 
-        <div class="control-group">
+        <div class="control-group" id="secondTurnGroup">
           <div class="control-heading" id="secondTurnHeading">Second turn</div>
           <div class="segmented mode" role="radiogroup" aria-label="Second turn trigger">
             <label>
@@ -710,6 +734,10 @@
             <label>
               <input type="radio" name="mode" value="cross">
               <span tabindex="0">At crossing</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="blindspot">
+              <span tabindex="0">At blindspot</span>
             </label>
             <label>
               <input type="radio" name="mode" value="fixed">
@@ -744,8 +772,8 @@
           </label>
         </div>
         <div class="legend" aria-hidden="true">
-          <span class="legend-item"><span class="swatch"></span>A1 outside</span>
-          <span class="legend-item"><span class="swatch"></span>A2 inside</span>
+          <span class="legend-item"><span class="swatch"></span><span id="a1LegendLabel">A1 outside</span></span>
+          <span class="legend-item"><span class="swatch"></span><span id="a2LegendLabel">A2 inside</span></span>
         </div>
       </div>
     </section>
@@ -771,17 +799,21 @@
       pageTitle: document.getElementById("pageTitle"),
       infoToggle: document.getElementById("infoToggle"),
       maneuverInfo: document.getElementById("maneuverInfo"),
+      turnAngleGroup: document.getElementById("turnAngleGroup"),
       turnAngle: document.getElementById("turnAngle"),
       turnAngleValue: document.getElementById("turnAngleValue"),
+      directionGroup: document.getElementById("directionGroup"),
       firstTurnGroup: document.getElementById("firstTurnGroup"),
       overturnGroup: document.getElementById("overturnGroup"),
       overturn: document.getElementById("overturn"),
       overturnValue: document.getElementById("overturnValue"),
       overturnHalfAngle: document.getElementById("overturnHalfAngle"),
+      separationGroup: document.getElementById("separationGroup"),
       separation: document.getElementById("separation"),
       separationValue: document.getElementById("separationValue"),
       speed: document.getElementById("speed"),
       speedValue: document.getElementById("speedValue"),
+      secondTurnGroup: document.getElementById("secondTurnGroup"),
       secondTurnHeading: document.getElementById("secondTurnHeading"),
       fixedWait: document.getElementById("fixedWait"),
       fixedWaitLabel: document.getElementById("fixedWaitLabel"),
@@ -792,6 +824,8 @@
       blindspotSize: document.getElementById("blindspotSize"),
       blindspotSizeValue: document.getElementById("blindspotSizeValue"),
       showBlindspots: document.getElementById("showBlindspots"),
+      a1LegendLabel: document.getElementById("a1LegendLabel"),
+      a2LegendLabel: document.getElementById("a2LegendLabel"),
       elapsedLarge: document.getElementById("elapsedLarge"),
       turnTimeSummary: document.getElementById("turnTimeSummary"),
       blindspotTimeSummary: document.getElementById("blindspotTimeSummary"),
@@ -868,12 +902,16 @@
       const directionInput = document.querySelector("input[name='direction']:checked");
       const firstStartInput = document.querySelector("input[name='firstStart']:checked");
       const modeInput = document.querySelector("input[name='mode']:checked");
-      const angleMax = maneuverType === "unassisted" ? 90 : 70;
-      elements.turnAngle.max = String(angleMax);
+      const angleMin = maneuverType === "check" ? 1 : 20;
+      const angleMax = maneuverType === "unassisted" || maneuverType === "check" ? 90 : 70;
       let angleDeg = Number(elements.turnAngle.value);
-      if (angleDeg > angleMax) {
-        angleDeg = angleMax;
-        elements.turnAngle.value = String(angleMax);
+      if (needsTurnAngleControl(maneuverType)) {
+        elements.turnAngle.min = String(angleMin);
+        elements.turnAngle.max = String(angleMax);
+      }
+      if (needsTurnAngleControl(maneuverType)) {
+        angleDeg = clamp(angleDeg, angleMin, angleMax);
+        elements.turnAngle.value = String(angleDeg);
       }
       const lockOverturnToHalf = elements.overturnHalfAngle.checked;
       const overturnDeg = lockOverturnToHalf ? angleDeg / 2 : Number(elements.overturn.value);
@@ -1152,6 +1190,51 @@
       return angularDistance(bearing, tailBearing) <= coneAngle / 2;
     }
 
+    function a1InA2Blindspot(getStates, time, coneAngle) {
+      const states = getStates(time);
+      return isInBlindspot(states.a2, states.a1, coneAngle);
+    }
+
+    function findA1BlindspotEntryTime(getStates, startTime, searchDuration, coneAngle) {
+      let previousTime = startTime;
+      let previousInside = a1InA2Blindspot(getStates, previousTime, coneAngle);
+      if (previousInside) {
+        return {
+          available: true,
+          time: startTime
+        };
+      }
+
+      const steps = clamp(Math.ceil(searchDuration / 0.05), 320, 7000);
+      for (let index = 1; index <= steps; index += 1) {
+        const time = startTime + (searchDuration * index) / steps;
+        const inside = a1InA2Blindspot(getStates, time, coneAngle);
+        if (!previousInside && inside) {
+          let low = previousTime;
+          let high = time;
+          for (let refine = 0; refine < 36; refine += 1) {
+            const mid = (low + high) / 2;
+            if (a1InA2Blindspot(getStates, mid, coneAngle)) {
+              high = mid;
+            } else {
+              low = mid;
+            }
+          }
+          return {
+            available: true,
+            time: high
+          };
+        }
+        previousTime = time;
+        previousInside = inside;
+      }
+
+      return {
+        available: false,
+        time: startTime
+      };
+    }
+
     function computeBlindspotTime(a1Segments, a2Segments, maneuverEnd, speed, coneAngle) {
       if (maneuverEnd <= 0) {
         return 0;
@@ -1171,7 +1254,75 @@
       return total;
     }
 
+    function isBasicFormationManeuver(type) {
+      return type === "hook" || type === "cross180" || type === "check" || type === "shackle";
+    }
+
+    function needsTurnAngleControl(type) {
+      return type === "double" || type === "assisted" || type === "unassisted" || type === "check";
+    }
+
+    function needsDirectionControl(type) {
+      return type === "double" || type === "assisted" || type === "unassisted" || type === "hook" || type === "check";
+    }
+
+    function needsSecondTurnControl(type) {
+      return type === "double" || type === "assisted" || type === "unassisted";
+    }
+
+    function finalizeRoute(settings, radius, a1Segments, a2Segments, a1Start, a2Start, maneuverEnd, extras = {}) {
+      const completionA1 = stateAt(a1Segments, maneuverEnd, settings.speedNmPerSec).point;
+      const completionA2 = stateAt(a2Segments, maneuverEnd, settings.speedNmPerSec).point;
+      const completionSpacing = distance(completionA1, completionA2);
+      const totalTime = maneuverEnd + FINAL_LEAD_SECONDS;
+      appendLine(a1Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+      appendLine(a2Segments, maneuverEnd, totalTime, settings.speedNmPerSec);
+
+      const samples = {
+        a1: sampleSegments(a1Segments, totalTime, settings.speedNmPerSec),
+        a2: sampleSegments(a2Segments, totalTime, settings.speedNmPerSec)
+      };
+
+      return {
+        radius,
+        a1Segments,
+        a2Segments,
+        a1Start,
+        a2Start,
+        a1TriggerTime: 0,
+        a2TriggerTime: 0,
+        firstTurnCompleteTime: maneuverEnd,
+        a1FirstTurnCompleteTime: maneuverEnd,
+        a2FirstTurnStartTime: 0,
+        a2FirstTurnCompleteTime: maneuverEnd,
+        totalTime,
+        maneuverEnd,
+        completionA1,
+        completionA2,
+        completionSpacing,
+        blindspotTime: computeBlindspotTime(a1Segments, a2Segments, maneuverEnd, settings.speedNmPerSec, settings.blindspotRad),
+        equalSpacing: { available: false },
+        crossing: null,
+        samples,
+        showTriggerMarkers: false,
+        notes: [],
+        ...extras
+      };
+    }
+
     function buildRoute(settings) {
+      if (settings.maneuverType === "hook") {
+        return buildHookRoute(settings);
+      }
+      if (settings.maneuverType === "cross180") {
+        return buildCrossRoute(settings);
+      }
+      if (settings.maneuverType === "check") {
+        return buildCheckRoute(settings);
+      }
+      if (settings.maneuverType === "shackle") {
+        return buildShackleRoute(settings);
+      }
       if (settings.maneuverType === "unassisted") {
         return buildUnassistedRoute(settings);
       }
@@ -1179,6 +1330,86 @@
         return buildAssistedRoute(settings);
       }
       return buildDoubleAssistedRoute(settings);
+    }
+
+    function buildSynchronousTurnRoute(settings, angle, a1TurnSign, a2TurnSign, extras = {}) {
+      const radius = getTurnRadius(settings);
+      const startHeading = 0;
+      const a1Start = { x: 0, y: -settings.separation / 2 };
+      const a2Start = { x: 0, y: settings.separation / 2 };
+      const a1Turn = makeArc(0, a1Start, startHeading, a1TurnSign, angle, radius, settings.speedNmPerSec);
+      const a2Turn = makeArc(0, a2Start, startHeading, a2TurnSign, angle, radius, settings.speedNmPerSec);
+      const maneuverEnd = Math.max(a1Turn.endTime, a2Turn.endTime);
+      return finalizeRoute(settings, radius, [a1Turn], [a2Turn], a1Start, a2Start, maneuverEnd, extras);
+    }
+
+    function buildHookRoute(settings) {
+      return buildSynchronousTurnRoute(settings, Math.PI, settings.sign, settings.sign);
+    }
+
+    function buildCheckRoute(settings) {
+      return buildSynchronousTurnRoute(settings, settings.angleRad, settings.sign, settings.sign);
+    }
+
+    function buildCrossRoute(settings) {
+      const radius = getTurnRadius(settings);
+      const notes = [];
+      const crossingCos = 1 - settings.separation / (2 * radius);
+      if (crossingCos >= -1 && crossingCos <= 1) {
+        const crossingSweep = Math.acos(crossingCos);
+        notes.push({
+          point: {
+            x: radius * Math.sin(crossingSweep),
+            y: 0
+          },
+          lines: ["Wingman:", "below"],
+          placement: "right",
+          offsetX: 42
+        });
+      }
+      return buildSynchronousTurnRoute(settings, Math.PI, 1, -1, { notes });
+    }
+
+    function buildShackleRoute(settings) {
+      const radius = getTurnRadius(settings);
+      const startHeading = 0;
+      const shackleAngle = Math.PI / 4;
+      const a1Start = { x: 0, y: -settings.separation / 2 };
+      const a2Start = { x: 0, y: settings.separation / 2 };
+      const a1In = makeArc(0, a1Start, startHeading, 1, shackleAngle, radius, settings.speedNmPerSec);
+      const a2In = makeArc(0, a2Start, startHeading, -1, shackleAngle, radius, settings.speedNmPerSec);
+      const arcLateralGain = 2 * radius * (1 - Math.cos(shackleAngle));
+      const straightDuration = Math.max(0, (settings.separation - arcLateralGain) / (settings.speedNmPerSec * Math.sin(shackleAngle)));
+
+      const a1Segments = [a1In];
+      const a2Segments = [a2In];
+      if (straightDuration > 0.0001) {
+        a1Segments.push(makeLine(a1In.endTime, a1In.endPoint, a1In.endHeading, straightDuration, settings.speedNmPerSec));
+        a2Segments.push(makeLine(a2In.endTime, a2In.endPoint, a2In.endHeading, straightDuration, settings.speedNmPerSec));
+      }
+
+      const a1StraightEnd = a1Segments[a1Segments.length - 1];
+      const a2StraightEnd = a2Segments[a2Segments.length - 1];
+      const a1Out = makeArc(a1StraightEnd.endTime, a1StraightEnd.endPoint, a1StraightEnd.endHeading, -1, shackleAngle, radius, settings.speedNmPerSec);
+      const a2Out = makeArc(a2StraightEnd.endTime, a2StraightEnd.endPoint, a2StraightEnd.endHeading, 1, shackleAngle, radius, settings.speedNmPerSec);
+      a1Segments.push(a1Out);
+      a2Segments.push(a2Out);
+
+      const maneuverEnd = Math.max(a1Out.endTime, a2Out.endTime);
+      const crossingPoint = {
+        x: a1In.endPoint.x + (straightDuration * settings.speedNmPerSec * Math.cos(shackleAngle)) / 2,
+        y: 0
+      };
+      return finalizeRoute(settings, radius, a1Segments, a2Segments, a1Start, a2Start, maneuverEnd, {
+        notes: [
+          {
+            point: crossingPoint,
+            lines: ["Wingman:", "below"],
+            placement: "below",
+            offsetY: 44
+          }
+        ]
+      });
     }
 
     function buildDoubleAssistedRoute(settings) {
@@ -1247,6 +1478,16 @@
         settings.separation,
         getEqualSpacingSearchDuration(settings, a1First.duration)
       );
+      const blindspotReferenceTime = Math.max(a1First.endTime, a2First.endTime);
+      const blindspotEntry = findA1BlindspotEntryTime(
+        (time) => ({
+          a1: stateAfterFirst(a1FirstSegments, a1First.endTime, time),
+          a2: stateAfterFirst(a2FirstSegments, a2First.endTime, time)
+        }),
+        blindspotReferenceTime,
+        getEqualSpacingSearchDuration(settings, a1First.duration),
+        settings.blindspotRad
+      );
       let a1TriggerTime = a1First.endTime + settings.fixedWait;
       let a2TriggerTime = a1TriggerTime;
       let crossing = null;
@@ -1265,6 +1506,9 @@
       } else if (settings.mode === "fixed") {
         a1TriggerTime = a1First.endTime + settings.fixedWait;
         a2TriggerTime = a2First.endTime + settings.fixedWait;
+      } else if (settings.mode === "blindspot") {
+        a1TriggerTime = blindspotEntry.time;
+        a2TriggerTime = blindspotEntry.time;
       } else if (settings.mode === "optimum") {
         a1TriggerTime = a1First.endTime + equalSpacing.delayAfterFirstComplete;
         a2TriggerTime = a2First.endTime + equalSpacing.delayAfterFirstComplete;
@@ -1356,6 +1600,23 @@
         delayAfterFirstComplete: optimumTriggerTime,
         result: makeTriggeredRoute(optimumTriggerTime)
       };
+      const blindspotReferenceTime = a1First.endTime;
+      const blindspotEntry = findA1BlindspotEntryTime(
+        (time) => {
+          const a1Segments = a1FirstSegments.slice();
+          appendLine(a1Segments, a1First.endTime, time, settings.speedNmPerSec);
+          return {
+            a1: stateAt(a1Segments, time, settings.speedNmPerSec),
+            a2: {
+              point: add(a2Start, scale(forward(startHeading), settings.speedNmPerSec * time)),
+              heading: startHeading
+            }
+          };
+        },
+        blindspotReferenceTime,
+        getEqualSpacingSearchDuration(settings, a1First.duration),
+        settings.blindspotRad
+      );
 
       let a2TriggerTime = a1First.endTime + settings.fixedWait;
       let crossing = null;
@@ -1370,6 +1631,8 @@
         }
       } else if (settings.mode === "fixed") {
         a2TriggerTime = a1First.endTime + settings.fixedWait;
+      } else if (settings.mode === "blindspot") {
+        a2TriggerTime = blindspotEntry.time;
       } else if (settings.mode === "optimum") {
         a2TriggerTime = equalSpacing.delayAfterFirstComplete;
       }
@@ -1473,6 +1736,16 @@
         settings.separation,
         getEqualSpacingSearchDuration(settings, Math.max(a1First.duration, a2TurnIn.duration))
       );
+      const blindspotReferenceTime = Math.max(a1First.endTime, a2TurnIn.endTime);
+      const blindspotEntry = findA1BlindspotEntryTime(
+        (time) => ({
+          a1: stateAfterTurnIn(a1FirstSegments, a1First.endTime, time),
+          a2: stateAfterTurnIn(a2TurnInSegments, a2TurnIn.endTime, time)
+        }),
+        blindspotReferenceTime,
+        getEqualSpacingSearchDuration(settings, Math.max(a1First.duration, a2TurnIn.duration)),
+        settings.blindspotRad
+      );
 
       let returnTriggerTime = a2TurnIn.endTime + settings.fixedWait;
       let crossing = null;
@@ -1489,6 +1762,8 @@
         }
       } else if (settings.mode === "fixed") {
         returnTriggerTime = a2TurnIn.endTime + settings.fixedWait;
+      } else if (settings.mode === "blindspot") {
+        returnTriggerTime = blindspotEntry.time;
       } else if (settings.mode === "optimum") {
         returnTriggerTime = a2TurnIn.endTime + equalSpacing.delayAfterFirstComplete;
       }
@@ -1622,6 +1897,7 @@
       drawAircraftPath(route.samples.a2, elapsed, "var(--a2)", "rgba(31, 122, 140, 0.28)", transform);
       drawTriggerMarkers(transform);
       drawCompletionSpacing(transform);
+      drawRouteNotes(transform);
 
       const a1 = stateAt(route.a1Segments, elapsed, params.speedNmPerSec);
       const a2 = stateAt(route.a2Segments, elapsed, params.speedNmPerSec);
@@ -1761,6 +2037,9 @@
     }
 
     function drawTriggerMarkers(transform) {
+      if (route.showTriggerMarkers === false) {
+        return;
+      }
       const markers = getTriggerSnapshots();
       const drawnTimes = [];
 
@@ -1772,6 +2051,9 @@
     }
 
     function getTriggerSnapshots() {
+      if (route.showTriggerMarkers === false) {
+        return [];
+      }
       const a1AtA1Trigger = stateAt(route.a1Segments, route.a1TriggerTime, params.speedNmPerSec);
       const a2AtA1Trigger = stateAt(route.a2Segments, route.a1TriggerTime, params.speedNmPerSec);
       const a2AtA2Trigger = stateAt(route.a2Segments, route.a2TriggerTime, params.speedNmPerSec);
@@ -1955,6 +2237,69 @@
       ctx.restore();
     }
 
+    function drawRouteNotes(transform) {
+      if (!route.notes || !route.notes.length) {
+        return;
+      }
+
+      route.notes.forEach((note) => {
+        const point = transform.toScreen(note.point);
+        const lines = note.lines || [note.text || ""];
+        const placement = note.placement || "above";
+        ctx.save();
+        ctx.font = "800 12px Inter, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const metrics = lines.map((line) => ctx.measureText(line).width);
+        const boxWidth = Math.max(...metrics) + 18;
+        const lineHeight = 15;
+        const boxHeight = lines.length * lineHeight + 12;
+        const desiredX = placement === "right"
+          ? point.x + boxWidth / 2 + 50
+          : point.x;
+        const labelX = clamp(desiredX + (note.offsetX || 0), boxWidth / 2 + 8, viewport.width - boxWidth / 2 - 8);
+        const desiredY = placement === "below"
+          ? point.y + boxHeight / 2 + 38
+          : placement === "right"
+            ? point.y
+            : point.y - boxHeight / 2 - 38;
+        const noteOffsetY = note.offsetY || 0;
+        const labelY = clamp(desiredY, boxHeight / 2 + 8, viewport.height - boxHeight / 2 - 8);
+        const adjustedLabelY = clamp(labelY + noteOffsetY, boxHeight / 2 + 8, viewport.height - boxHeight / 2 - 8);
+
+        ctx.strokeStyle = "#5f5149";
+        ctx.fillStyle = "#5f5149";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        if (placement === "right") {
+          ctx.moveTo(labelX - boxWidth / 2, adjustedLabelY);
+        } else {
+          ctx.moveTo(labelX, placement === "below" ? adjustedLabelY - boxHeight / 2 : adjustedLabelY + boxHeight / 2);
+        }
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+        ctx.strokeStyle = "#d8dfdc";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(labelX - boxWidth / 2, adjustedLabelY - boxHeight / 2, boxWidth, boxHeight, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#5f5149";
+        const firstLineY = adjustedLabelY - ((lines.length - 1) * lineHeight) / 2;
+        lines.forEach((line, index) => {
+          ctx.fillText(line, labelX, firstLineY + index * lineHeight);
+        });
+        ctx.restore();
+      });
+    }
+
     function drawAircraftPath(points, splitTime, pastColor, futureColor, transform) {
       const past = [];
       const future = [];
@@ -2117,16 +2462,36 @@
       elements.blindspotTimeSummary.textContent = `Time in blindspot ${formatSeconds(route.blindspotTime)}`;
       elements.radiusSummary.textContent = `Radius ${route.radius.toFixed(2)} NM`;
       elements.completionSpacingSummary.textContent = `Spacing ${formatNm(route.completionSpacing)}`;
+      const plainLegend = params.maneuverType === "cross180" || params.maneuverType === "shackle";
+      elements.a1LegendLabel.textContent = plainLegend ? "A1" : "A1 outside";
+      elements.a2LegendLabel.textContent = plainLegend ? "A2" : "A2 inside";
+      elements.turnAngleGroup.hidden = !needsTurnAngleControl(params.maneuverType);
+      elements.directionGroup.hidden = !needsDirectionControl(params.maneuverType);
       elements.firstTurnGroup.hidden = params.maneuverType !== "double";
-      elements.overturnGroup.hidden = params.maneuverType === "unassisted";
+      elements.overturnGroup.hidden = !(params.maneuverType === "double" || params.maneuverType === "assisted");
+      elements.separationGroup.hidden = false;
+      elements.secondTurnGroup.hidden = !needsSecondTurnControl(params.maneuverType);
       elements.overturn.disabled = params.lockOverturnToHalf;
       elements.fixedWaitLabel.textContent = getFixedWaitLabel();
-      const fixed = params.mode === "fixed";
+      const fixed = needsSecondTurnControl(params.maneuverType) && params.mode === "fixed";
+      elements.fixedWaitGroup.hidden = !needsSecondTurnControl(params.maneuverType);
       elements.fixedWait.disabled = !fixed;
       elements.fixedWaitGroup.classList.toggle("disabled", !fixed);
     }
 
     function getManeuverTitle() {
+      if (params.maneuverType === "hook") {
+        return "Hook";
+      }
+      if (params.maneuverType === "cross180") {
+        return "Cross";
+      }
+      if (params.maneuverType === "check") {
+        return "Check";
+      }
+      if (params.maneuverType === "shackle") {
+        return "Shackle";
+      }
       if (params.maneuverType === "unassisted") {
         return "Unassisted Tactical Turn";
       }
@@ -2157,6 +2522,58 @@
     }
 
     function getManeuverInfo() {
+      if (params.maneuverType === "hook") {
+        return {
+          description: [
+            "Both aircraft perform the same 180 degree turn and reverse course while maintaining their spacing. Can either maintain contract speed, or max performance turn at mil or buster."
+          ],
+          pros: [
+            "Offsets the flight for the return leg.",
+            "Maintains spacing"
+          ],
+          cons: [
+          ]
+        };
+      }
+      if (params.maneuverType === "cross180") {
+        return {
+          description: [
+            "Both aircraft perform simultaneous 180 degree turns into each other. Wingman should deconflict below and slightly outside of lead for a close pass."
+          ],
+          pros: [
+            "Minimal space required."
+          ],
+          cons: [
+            "Unlikely to maintain spacing."
+          ]
+        };
+      }
+      if (params.maneuverType === "check") {
+        return {
+          description: [
+            "Both aircraft make the same simultaneous turn without crossing over."
+          ],
+          pros: [
+            "Easy",
+            "Can also be used to re-align a formation"
+          ],
+          cons: [
+            "Inside aircraft moves forwards, outside moves backwards"
+          ]
+        };
+      }
+      if (params.maneuverType === "shackle") {
+        return {
+          description: [
+            "Both aircraft turn 45 degrees into each other, continue until positions are switched, then turn back out onto the original heading. Wingman deconflicts from lead; below, or if no space, behind."
+          ],
+          pros: [
+            "Can be used to adjust spacing if desired."
+          ],
+          cons: [
+          ]
+        };
+      }
       if (params.maneuverType === "unassisted") {
         return {
           description: [
