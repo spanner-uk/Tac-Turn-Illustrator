@@ -1820,13 +1820,13 @@
       const returnAngle = settings.angleRad + crossingAngle;
 
       const outsideFirst = makeArc(0, roles.outsideStart, startHeading, settings.sign, settings.angleRad, radius, settings.speedNmPerSec);
-      const insideTurnInStartPoint = add(roles.insideStart, scale(forward(startHeading), settings.speedNmPerSec * outsideFirst.endTime));
-      const insideTurnIn = makeArc(outsideFirst.endTime, insideTurnInStartPoint, startHeading, -settings.sign, crossingAngle, radius, settings.speedNmPerSec);
+      const insideTurnInStartTime = settings.firstStartMode === "outside-first" ? outsideFirst.endTime : 0;
+      const insideTurnInStartPoint = add(roles.insideStart, scale(forward(startHeading), settings.speedNmPerSec * insideTurnInStartTime));
+      const insideTurnIn = makeArc(insideTurnInStartTime, insideTurnInStartPoint, startHeading, -settings.sign, crossingAngle, radius, settings.speedNmPerSec);
       const outsideFirstSegments = [outsideFirst];
-      const insideTurnInSegments = [
-        makeLine(0, roles.insideStart, startHeading, outsideFirst.endTime, settings.speedNmPerSec),
-        insideTurnIn
-      ];
+      const insideTurnInSegments = insideTurnInStartTime > 0
+        ? [makeLine(0, roles.insideStart, startHeading, insideTurnInStartTime, settings.speedNmPerSec), insideTurnIn]
+        : [insideTurnIn];
 
       function stateAfterTurnIn(segments, firstEndTime, time) {
         const tempSegments = segments.slice();
@@ -2634,7 +2634,7 @@
       elements.a2LegendLabel.textContent = "A2";
       elements.turnAngleGroup.hidden = !needsTurnAngleControl(params.maneuverType);
       elements.directionGroup.hidden = !needsDirectionControl(params.maneuverType);
-      elements.firstTurnGroup.hidden = params.maneuverType !== "double";
+      elements.firstTurnGroup.hidden = !(params.maneuverType === "double" || params.maneuverType === "assisted");
       elements.overturnGroup.hidden = !(params.maneuverType === "double" || params.maneuverType === "assisted");
       elements.separationGroup.hidden = false;
       elements.secondTurnGroup.hidden = !needsSecondTurnControl(params.maneuverType);
@@ -2831,6 +2831,21 @@
       elements.turnLoadFactor.value = Math.min(aircraft.milSustainedG, aircraft.maxTurnG).toFixed(1);
     }
 
+    function setRadioValue(name, value) {
+      const input = document.querySelector(`input[name='${name}'][value='${value}']`);
+      if (input) {
+        input.checked = true;
+      }
+    }
+
+    function applyManeuverDefaults(maneuverType) {
+      if (maneuverType === "assisted") {
+        setRadioValue("firstStart", "outside-first");
+      } else if (maneuverType === "double") {
+        setRadioValue("firstStart", "simultaneous");
+      }
+    }
+
     function setElapsed(value) {
       elapsed = clamp(value, 0, route.totalTime);
       updateOutputs();
@@ -2914,7 +2929,16 @@
 
       elements.overturnHalfAngle.addEventListener("change", rebuild);
 
-      document.querySelectorAll("input[name='maneuver'], input[name='direction'], input[name='firstStart'], input[name='mode']").forEach((control) => {
+      document.querySelectorAll("input[name='maneuver']").forEach((control) => {
+        control.addEventListener("change", () => {
+          if (control.checked) {
+            applyManeuverDefaults(control.value);
+          }
+          rebuild();
+        });
+      });
+
+      document.querySelectorAll("input[name='direction'], input[name='firstStart'], input[name='mode']").forEach((control) => {
         control.addEventListener("change", rebuild);
       });
 
