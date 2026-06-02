@@ -174,8 +174,12 @@
       min-width: 0;
     }
 
+    .segmented.tabs.secondary-tabs {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
     .segmented.tabs.secondary-tabs label {
-      grid-column: span 3;
+      grid-column: auto;
     }
 
     .segmented.tabs span {
@@ -883,6 +887,10 @@
       </div>
       <div class="segmented tabs secondary-tabs" role="tablist">
         <label>
+          <input type="radio" name="maneuver" value="turn90">
+          <span tabindex="0">90</span>
+        </label>
+        <label>
           <input type="radio" name="maneuver" value="hook">
           <span tabindex="0">Hook</span>
         </label>
@@ -1261,8 +1269,8 @@
       const aircraft = getAircraftProfile(aircraftKey);
       const turnLoadFactor = clamp(Number(elements.turnLoadFactor.value), 1.01, aircraft.maxTurnG);
       const angleMin = maneuverType === "check" ? 1 : 20;
-      const angleMax = maneuverType === "unassisted" || maneuverType === "check" ? 90 : 70;
-      let angleDeg = Number(elements.turnAngle.value);
+      const angleMax = isUnassistedManeuver(maneuverType) || maneuverType === "check" ? 90 : 70;
+      let angleDeg = maneuverType === "turn90" ? 90 : Number(elements.turnAngle.value);
       if (needsTurnAngleControl(maneuverType)) {
         elements.turnAngle.min = String(angleMin);
         elements.turnAngle.max = String(angleMax);
@@ -1621,7 +1629,11 @@
     }
 
     function isBasicFormationManeuver(type) {
-      return type === "hook" || type === "cross180" || type === "check" || type === "shackle";
+      return type === "turn90" || type === "hook" || type === "cross180" || type === "check" || type === "shackle";
+    }
+
+    function isUnassistedManeuver(type) {
+      return type === "unassisted" || type === "turn90";
     }
 
     function needsTurnAngleControl(type) {
@@ -1629,11 +1641,11 @@
     }
 
     function needsDirectionControl(type) {
-      return type === "double" || type === "assisted" || type === "unassisted" || type === "hook" || type === "check";
+      return type === "double" || type === "assisted" || isUnassistedManeuver(type) || type === "hook" || type === "check";
     }
 
     function needsSecondTurnControl(type) {
-      return type === "double" || type === "assisted" || type === "unassisted";
+      return type === "double" || type === "assisted" || isUnassistedManeuver(type);
     }
 
     function finalizeRoute(settings, radius, a1Segments, a2Segments, a1Start, a2Start, maneuverEnd, extras = {}) {
@@ -1689,7 +1701,7 @@
       if (settings.maneuverType === "shackle") {
         return buildShackleRoute(settings);
       }
-      if (settings.maneuverType === "unassisted") {
+      if (isUnassistedManeuver(settings.maneuverType)) {
         return buildUnassistedRoute(settings);
       }
       if (settings.maneuverType === "assisted") {
@@ -2499,7 +2511,7 @@
       const insideFirstCue = getInsideFirstTurnCueSnapshot();
       const insideTurnMarker = makeTriggerMarker(insideAircraft, insideTriggerTime);
 
-      if (params.maneuverType === "assisted" || params.maneuverType === "unassisted") {
+      if (params.maneuverType === "assisted" || isUnassistedManeuver(params.maneuverType)) {
         return params.maneuverType === "assisted" && insideFirstCue
           ? [insideFirstCue, insideTurnMarker]
           : [insideTurnMarker];
@@ -2953,6 +2965,9 @@
       if (params.maneuverType === "shackle") {
         return "Shackle";
       }
+      if (params.maneuverType === "turn90") {
+        return "90";
+      }
       if (params.maneuverType === "unassisted") {
         return "Unassisted Tactical Turn";
       }
@@ -2963,7 +2978,7 @@
     }
 
     function getSecondTurnHeading() {
-      if (params.maneuverType === "unassisted") {
+      if (isUnassistedManeuver(params.maneuverType)) {
         return "Inside turn";
       }
       if (params.maneuverType === "assisted") {
@@ -2973,7 +2988,7 @@
     }
 
     function getFixedWaitLabel() {
-      if (params.maneuverType === "unassisted") {
+      if (isUnassistedManeuver(params.maneuverType)) {
         return "Wait after outside turn";
       }
       if (params.maneuverType === "assisted") {
@@ -3035,7 +3050,7 @@
           ]
         };
       }
-      if (params.maneuverType === "unassisted") {
+      if (isUnassistedManeuver(params.maneuverType)) {
         return {
           description: [
             "Outside aircraft turns onto heading. Inside aircraft turns onto heading."

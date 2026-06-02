@@ -10,10 +10,6 @@ Tac turns can be tricky and different doctrines are applied by different airforc
 
 It is nicely illustrative how contract speed, separation and turn amount impacts turn cues, and the pros and cons of the different turn types. Note, tac turns don't have to be precise. The optimum turn locations may not be conducive to typical rules of thumb, but hopefully you can apply your rules of thumb to this tool and see the impact of those decisions in different scenarios.
 
-## Where's the 90?
-
-A 90 is an unassisted turn at 90 degrees. It's in there :)
-
 ## Features
 
 - Animated route plots for double assisted, assisted, unassisted, hook, cross, check, and shackle tac form maneuvers.
