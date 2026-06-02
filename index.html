@@ -273,6 +273,18 @@
       accent-color: var(--focus);
     }
 
+    select {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+    }
+
     .segmented {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -490,6 +502,7 @@
 
     .icon-button:focus-visible,
     .segmented span:focus-visible,
+    select:focus-visible,
     input:focus-visible {
       outline: 3px solid rgba(46, 111, 88, 0.28);
       outline-offset: 2px;
@@ -649,6 +662,7 @@
           <span class="pill" id="turnTimeSummary">Turn time 0.0 s</span>
           <span class="pill" id="blindspotTimeSummary">Time in blindspot 0.0 s</span>
           <span class="pill" id="radiusSummary">Radius 0.0 NM</span>
+          <span class="pill" id="turnProfileSummary">Turn 0.0 G</span>
           <span class="pill" id="completionSpacingSummary">Spacing 0.0 NM</span>
         </div>
       </div>
@@ -724,6 +738,26 @@
           <input id="speed" type="range" min="180" max="600" step="10" value="420">
         </div>
 
+        <div class="control-group">
+          <div class="control-heading">
+            <label for="aircraft">Aircraft</label>
+            <output id="aircraftGValue" for="aircraft">4.5 G MIL</output>
+          </div>
+          <select id="aircraft">
+            <option value="f16Block20">F-16 Block 20</option>
+            <option value="fa18c" selected>F/A-18C</option>
+            <option value="f14b">F-14B</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <div class="control-heading">
+            <label for="turnLoadFactor">Sustained turn G</label>
+            <output id="turnLoadFactorValue" for="turnLoadFactor">4.5 G</output>
+          </div>
+          <input id="turnLoadFactor" type="range" min="2" max="7.5" step="0.1" value="4.5">
+        </div>
+
         <div class="control-group" id="secondTurnGroup">
           <div class="control-heading" id="secondTurnHeading">Second turn</div>
           <div class="segmented mode" role="radiogroup" aria-label="Second turn trigger">
@@ -788,10 +822,29 @@
   </main>
 
   <script>
-    const BASE_TURN_SPEED_KTS = 420;
-    const BASE_TURN_RADIUS_NM = 0.7;
+    const KNOTS_TO_FEET_PER_SECOND = 1.68780986;
+    const FEET_PER_NM = 6076.11549;
+    const GRAVITY_FTPS2 = 32.174;
     const MIN_TURN_RADIUS_NM = 0.08;
     const FINAL_LEAD_SECONDS = 8;
+    // Practical MIL-turn starting points; exact Ps=0 G varies with altitude, weight, stores, and temperature.
+    const AIRCRAFT_PROFILES = {
+      f16Block20: {
+        label: "F-16 Block 20",
+        milSustainedG: 4.8,
+        maxTurnG: 9
+      },
+      fa18c: {
+        label: "F/A-18C",
+        milSustainedG: 4.5,
+        maxTurnG: 7.5
+      },
+      f14b: {
+        label: "F-14B",
+        milSustainedG: 4.5,
+        maxTurnG: 6.5
+      }
+    };
 
     const elements = {
       stage: document.getElementById("stage"),
@@ -813,6 +866,10 @@
       separationValue: document.getElementById("separationValue"),
       speed: document.getElementById("speed"),
       speedValue: document.getElementById("speedValue"),
+      aircraft: document.getElementById("aircraft"),
+      aircraftGValue: document.getElementById("aircraftGValue"),
+      turnLoadFactor: document.getElementById("turnLoadFactor"),
+      turnLoadFactorValue: document.getElementById("turnLoadFactorValue"),
       secondTurnGroup: document.getElementById("secondTurnGroup"),
       secondTurnHeading: document.getElementById("secondTurnHeading"),
       fixedWait: document.getElementById("fixedWait"),
@@ -830,6 +887,7 @@
       turnTimeSummary: document.getElementById("turnTimeSummary"),
       blindspotTimeSummary: document.getElementById("blindspotTimeSummary"),
       radiusSummary: document.getElementById("radiusSummary"),
+      turnProfileSummary: document.getElementById("turnProfileSummary"),
       completionSpacingSummary: document.getElementById("completionSpacingSummary"),
       playPause: document.getElementById("playPause")
     };
@@ -891,9 +949,21 @@
       return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)} deg`;
     }
 
+    function formatG(value) {
+      return `${value.toFixed(1)} G`;
+    }
+
     function normalizeRadians(value) {
       const fullTurn = Math.PI * 2;
       return ((value % fullTurn) + fullTurn) % fullTurn;
+    }
+
+    function getAircraftProfile(key) {
+      return AIRCRAFT_PROFILES[key] || AIRCRAFT_PROFILES.fa18c;
+    }
+
+    function getTurnBankDeg(loadFactor) {
+      return degrees(Math.acos(1 / Math.max(loadFactor, 1.0001)));
     }
 
     function readParams() {
@@ -902,6 +972,9 @@
       const directionInput = document.querySelector("input[name='direction']:checked");
       const firstStartInput = document.querySelector("input[name='firstStart']:checked");
       const modeInput = document.querySelector("input[name='mode']:checked");
+      const aircraftKey = elements.aircraft.value;
+      const aircraft = getAircraftProfile(aircraftKey);
+      const turnLoadFactor = clamp(Number(elements.turnLoadFactor.value), 1.01, aircraft.maxTurnG);
       const angleMin = maneuverType === "check" ? 1 : 20;
       const angleMax = maneuverType === "unassisted" || maneuverType === "check" ? 90 : 70;
       let angleDeg = Number(elements.turnAngle.value);
@@ -928,6 +1001,12 @@
         separation: Number(elements.separation.value),
         speedKts: Number(elements.speed.value),
         speedNmPerSec: Number(elements.speed.value) / 3600,
+        aircraftKey,
+        aircraftLabel: aircraft.label,
+        aircraftMilSustainedG: aircraft.milSustainedG,
+        aircraftMaxTurnG: aircraft.maxTurnG,
+        turnLoadFactor,
+        turnBankDeg: getTurnBankDeg(turnLoadFactor),
         firstStartMode: firstStartInput ? firstStartInput.value : "simultaneous",
         mode: modeInput ? modeInput.value : "cross",
         fixedWait: Number(elements.fixedWait.value),
@@ -1165,8 +1244,10 @@
     }
 
     function getTurnRadius(settings) {
-      const speedRatio = settings.speedKts / BASE_TURN_SPEED_KTS;
-      return Math.max(MIN_TURN_RADIUS_NM, BASE_TURN_RADIUS_NM * speedRatio * speedRatio);
+      const speedFtPerSecond = settings.speedKts * KNOTS_TO_FEET_PER_SECOND;
+      const radialG = Math.sqrt(Math.max(settings.turnLoadFactor * settings.turnLoadFactor - 1, 0.0001));
+      const radiusFeet = (speedFtPerSecond * speedFtPerSecond) / (GRAVITY_FTPS2 * radialG);
+      return Math.max(MIN_TURN_RADIUS_NM, radiusFeet / FEET_PER_NM);
     }
 
     function getUnassistedOptimumTriggerTime(settings) {
@@ -2452,6 +2533,10 @@
       elements.overturnValue.value = formatDegrees(params.overturnDeg);
       elements.separationValue.value = formatNm(params.separation);
       elements.speedValue.value = `${params.speedKts.toFixed(0)} kt`;
+      elements.aircraftGValue.value = `${formatG(params.aircraftMilSustainedG)} MIL`;
+      elements.turnLoadFactor.max = params.aircraftMaxTurnG.toFixed(1);
+      elements.turnLoadFactor.value = params.turnLoadFactor.toFixed(1);
+      elements.turnLoadFactorValue.value = formatG(params.turnLoadFactor);
       elements.fixedWaitValue.value = formatSeconds(params.fixedWait);
       elements.blindspotSizeValue.value = formatDegrees(params.blindspotDeg);
       elements.timeSlider.max = route.totalTime.toFixed(1);
@@ -2461,6 +2546,7 @@
       elements.turnTimeSummary.textContent = `Turn time ${route.maneuverEnd.toFixed(1)} s`;
       elements.blindspotTimeSummary.textContent = `Time in blindspot ${formatSeconds(route.blindspotTime)}`;
       elements.radiusSummary.textContent = `Radius ${route.radius.toFixed(2)} NM`;
+      elements.turnProfileSummary.textContent = `Turn ${formatG(params.turnLoadFactor)}`;
       elements.completionSpacingSummary.textContent = `Spacing ${formatNm(route.completionSpacing)}`;
       const plainLegend = params.maneuverType === "cross180" || params.maneuverType === "shackle";
       elements.a1LegendLabel.textContent = plainLegend ? "A1" : "A1 outside";
@@ -2658,6 +2744,12 @@
       draw();
     }
 
+    function applyAircraftTurnPreset() {
+      const aircraft = getAircraftProfile(elements.aircraft.value);
+      elements.turnLoadFactor.max = aircraft.maxTurnG.toFixed(1);
+      elements.turnLoadFactor.value = Math.min(aircraft.milSustainedG, aircraft.maxTurnG).toFixed(1);
+    }
+
     function setElapsed(value) {
       elapsed = clamp(value, 0, route.totalTime);
       updateOutputs();
@@ -2730,8 +2822,13 @@
     }
 
     function wireControls() {
-      [elements.turnAngle, elements.overturn, elements.separation, elements.speed, elements.fixedWait].forEach((control) => {
+      [elements.turnAngle, elements.overturn, elements.separation, elements.speed, elements.turnLoadFactor, elements.fixedWait].forEach((control) => {
         control.addEventListener("input", rebuild);
+      });
+
+      elements.aircraft.addEventListener("change", () => {
+        applyAircraftTurnPreset();
+        rebuild();
       });
 
       elements.overturnHalfAngle.addEventListener("change", rebuild);
