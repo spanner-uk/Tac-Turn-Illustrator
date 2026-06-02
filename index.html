@@ -236,6 +236,18 @@
       overflow: auto;
     }
 
+    .control-section {
+      display: block;
+    }
+
+    .control-section > summary {
+      display: none;
+    }
+
+    .mobile-display-section {
+      display: none;
+    }
+
     .control-group {
       padding: 14px 0;
       border-bottom: 1px solid var(--soft);
@@ -246,6 +258,20 @@
     }
 
     .control-group:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .control-section:first-of-type > .control-group:first-of-type {
+      padding-top: 0;
+    }
+
+    .control-section > .control-group:last-child {
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--soft);
+    }
+
+    .control-section[data-control-section="timing"] > .control-group:last-child {
       padding-bottom: 0;
       border-bottom: 0;
     }
@@ -562,18 +588,39 @@
       white-space: nowrap;
     }
 
-    @media (max-width: 900px) {
-      .app {
-        padding: 14px;
+    @media (max-width: 1024px) {
+      html,
+      body {
+        height: auto;
+        min-height: 100%;
+        overflow: auto;
       }
 
-      .topbar,
-      .workspace {
-        grid-template-columns: 1fr;
+      .app {
+        padding: 14px;
+        width: 100%;
+        height: auto;
+        min-height: 100dvh;
+        grid-template-rows: auto auto auto auto auto;
+        gap: 12px;
+        overflow: visible;
+      }
+
+      .maneuver-nav {
+        order: 1;
       }
 
       .topbar {
-        display: grid;
+        order: 2;
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+
+      .meta {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
       }
 
       .time-card {
@@ -582,17 +629,202 @@
       }
 
       .workspace {
-        display: grid;
-        grid-template-rows: minmax(260px, 1fr) minmax(150px, auto);
-      }
-
-      .controls {
-        order: 2;
-        max-height: 34vh;
+        display: contents;
       }
 
       .stage {
+        order: 3;
+        height: clamp(300px, 55dvh, 520px);
+        min-height: 300px;
+      }
+
+      .diagram-options {
+        display: none;
+      }
+
+      .legend {
+        left: 10px;
+        top: 10px;
+        right: 10px;
+      }
+
+      .legend-item {
+        min-height: 26px;
+        padding: 4px 8px;
+        font-size: 0.78rem;
+      }
+
+      .scrubber {
+        order: 4;
+      }
+
+      .controls {
+        order: 5;
+        max-height: none;
+        padding: 10px;
+        overflow: visible;
+      }
+
+      .control-section {
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .control-section + .control-section {
+        margin-top: 10px;
+      }
+
+      .control-section > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 44px;
+        padding: 10px 12px;
+        color: var(--ink);
+        font-size: 0.92rem;
+        font-weight: 800;
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+      }
+
+      .control-section > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .control-section > summary::after {
+        content: "+";
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .control-section[open] > summary {
+        border-bottom: 1px solid var(--soft);
+      }
+
+      .control-section[open] > summary::after {
+        content: "-";
+      }
+
+      .control-section > .control-group {
+        padding: 12px;
+      }
+
+      .control-section > .control-group:first-of-type {
+        padding-top: 12px;
+      }
+
+      .controls > .control-section:first-of-type > .control-group:first-of-type {
+        padding-top: 12px;
+      }
+
+      .control-section > .control-group:last-child {
+        padding-bottom: 12px;
+        border-bottom: 0;
+      }
+
+      .controls > .control-section[data-control-section="timing"] > .control-group:last-child {
+        padding-bottom: 12px;
+        border-bottom: 0;
+      }
+
+      .mobile-display-section {
+        display: block;
+      }
+
+      .segmented.tabs {
+        display: flex;
+        grid-template-columns: none;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .segmented.tabs label,
+      .segmented.tabs.secondary-tabs label {
+        flex: 0 0 auto;
+        grid-column: auto;
+        min-width: max-content;
+      }
+
+      .segmented span,
+      .toggle-row,
+      select {
+        min-height: 44px;
+      }
+
+      .icon-button {
+        width: 44px;
+        height: 44px;
+      }
+    }
+
+    @media (max-width: 1024px) and (orientation: landscape) {
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .app {
+        height: 100dvh;
         min-height: 0;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, min(360px, 38vw));
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        grid-template-areas:
+          "nav nav"
+          "topbar topbar"
+          "stage controls"
+          "scrubber controls";
+        overflow: hidden;
+      }
+
+      .maneuver-nav {
+        grid-area: nav;
+        order: 0;
+      }
+
+      .topbar {
+        grid-area: topbar;
+        order: 0;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+      }
+
+      .time-card {
+        width: auto;
+        min-width: 138px;
+        padding: 8px 10px;
+      }
+
+      .time-card strong {
+        font-size: 1.25rem;
+      }
+
+      .stage {
+        grid-area: stage;
+        order: 0;
+        height: auto;
+        min-height: 0;
+      }
+
+      .scrubber {
+        grid-area: scrubber;
+        order: 0;
+      }
+
+      .controls {
+        grid-area: controls;
+        order: 0;
+        min-height: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
       }
     }
 
@@ -603,22 +835,31 @@
       }
 
       .tabs span {
-        min-height: 32px;
-        padding: 5px 6px;
-        font-size: 0.8rem;
+        padding: 6px 8px;
+        font-size: 0.82rem;
       }
 
       .stage {
-        min-height: 0;
+        height: clamp(300px, 54dvh, 480px);
+        min-height: 300px;
       }
 
       .scrubber {
-        grid-template-columns: 42px 1fr;
+        grid-template-columns: 44px 1fr;
+        gap: 10px;
+        padding: 10px;
       }
 
       .time-readout {
         grid-column: 1 / -1;
         text-align: left;
+      }
+    }
+
+    @media (max-width: 560px) and (orientation: landscape) {
+      .stage {
+        height: auto;
+        min-height: 0;
       }
     }
   </style>
@@ -683,120 +924,149 @@
 
     <section class="workspace">
       <aside class="controls" aria-label="Maneuver controls">
-        <div class="control-group" id="turnAngleGroup">
-          <div class="control-heading">
-            <label for="turnAngle">Turn angle</label>
-            <output id="turnAngleValue" for="turnAngle">45 deg</output>
-          </div>
-          <input id="turnAngle" type="range" min="20" max="70" step="1" value="45">
-        </div>
+        <details class="control-section" data-control-section="maneuver" open>
+          <summary>Maneuver</summary>
 
-        <div class="control-group" id="directionGroup">
-          <div class="control-heading">Direction</div>
-          <div class="segmented" role="radiogroup" aria-label="Turn direction">
-            <label>
-              <input type="radio" name="direction" value="left" checked>
-              <span tabindex="0">Left</span>
-            </label>
-            <label>
-              <input type="radio" name="direction" value="right">
-              <span tabindex="0">Right</span>
-            </label>
+          <div class="control-group" id="turnAngleGroup">
+            <div class="control-heading">
+              <label for="turnAngle">Turn angle</label>
+              <output id="turnAngleValue" for="turnAngle">45 deg</output>
+            </div>
+            <input id="turnAngle" type="range" min="20" max="70" step="1" value="45">
           </div>
-        </div>
 
-        <div class="control-group" id="firstTurnGroup">
-          <div class="control-heading">First turn</div>
-          <div class="segmented mode" role="radiogroup" aria-label="First turn timing">
-            <label>
-              <input type="radio" name="firstStart" value="simultaneous" checked>
-              <span tabindex="0">Simultaneous</span>
-            </label>
-            <label>
-              <input type="radio" name="firstStart" value="outside-first">
-              <span tabindex="0" title="Inside aircraft's first turn begins after outside aircraft completes first turn (wings level)">Outside first</span>
-            </label>
+          <div class="control-group" id="directionGroup">
+            <div class="control-heading">Direction</div>
+            <div class="segmented" role="radiogroup" aria-label="Turn direction">
+              <label>
+                <input type="radio" name="direction" value="left" checked>
+                <span tabindex="0">Left</span>
+              </label>
+              <label>
+                <input type="radio" name="direction" value="right">
+                <span tabindex="0">Right</span>
+              </label>
+            </div>
           </div>
-        </div>
 
-        <div class="control-group" id="overturnGroup">
-          <div class="control-heading">
-            <label for="overturn">Overturn</label>
-            <output id="overturnValue" for="overturn">20 deg</output>
+          <div class="control-group" id="firstTurnGroup">
+            <div class="control-heading">First turn</div>
+            <div class="segmented mode" role="radiogroup" aria-label="First turn timing">
+              <label>
+                <input type="radio" name="firstStart" value="simultaneous" checked>
+                <span tabindex="0">Simultaneous</span>
+              </label>
+              <label>
+                <input type="radio" name="firstStart" value="outside-first">
+                <span tabindex="0" title="Inside aircraft's first turn begins after outside aircraft completes first turn (wings level)">Outside first</span>
+              </label>
+            </div>
           </div>
-          <input id="overturn" type="range" min="0" max="45" step="1" value="20">
-          <label class="toggle-row" for="overturnHalfAngle">
-            <span>Lock to 50% of turn angle</span>
-            <input id="overturnHalfAngle" type="checkbox">
-          </label>
-        </div>
 
-        <div class="control-group" id="separationGroup">
-          <div class="control-heading">
-            <label for="separation">Spacing</label>
-            <output id="separationValue" for="separation">1.0 NM</output>
-          </div>
-          <input id="separation" type="range" min="0.5" max="5" step="0.1" value="1">
-        </div>
-
-        <div class="control-group">
-          <div class="control-heading">
-            <label for="speed">Contract speed</label>
-            <output id="speedValue" for="speed">420 kt</output>
-          </div>
-          <input id="speed" type="range" min="180" max="600" step="10" value="420">
-        </div>
-
-        <div class="control-group">
-          <div class="control-heading">
-            <label for="aircraft">Aircraft</label>
-            <output id="aircraftGValue" for="aircraft">4.5 G MIL</output>
-          </div>
-          <select id="aircraft">
-            <option value="f16Block20">F-16C</option>
-            <option value="fa18c" selected>F/A-18C</option>
-            <option value="f14b">F-14B</option>
-          </select>
-        </div>
-
-        <div class="control-group">
-          <div class="control-heading">
-            <label for="turnLoadFactor">Sustained turn G</label>
-            <output id="turnLoadFactorValue" for="turnLoadFactor">4.5 G</output>
-          </div>
-          <input id="turnLoadFactor" type="range" min="2" max="7.5" step="0.1" value="4.5">
-        </div>
-
-        <div class="control-group" id="secondTurnGroup">
-          <div class="control-heading" id="secondTurnHeading">Second turn</div>
-          <div class="segmented mode" role="radiogroup" aria-label="Second turn trigger">
-            <label>
-              <input type="radio" name="mode" value="optimum" checked>
-              <span tabindex="0">Optimum</span>
-            </label>
-            <label>
-              <input type="radio" name="mode" value="cross">
-              <span tabindex="0">At crossing</span>
-            </label>
-            <label>
-              <input type="radio" name="mode" value="blindspot">
-              <span tabindex="0">At blindspot</span>
-            </label>
-            <label>
-              <input type="radio" name="mode" value="fixed">
-              <span tabindex="0">Fixed wait</span>
+          <div class="control-group" id="overturnGroup">
+            <div class="control-heading">
+              <label for="overturn">Overturn</label>
+              <output id="overturnValue" for="overturn">20 deg</output>
+            </div>
+            <input id="overturn" type="range" min="0" max="45" step="1" value="20">
+            <label class="toggle-row" for="overturnHalfAngle">
+              <span>Lock to 50% of turn angle</span>
+              <input id="overturnHalfAngle" type="checkbox">
             </label>
           </div>
-        </div>
 
-        <div class="control-group" id="fixedWaitGroup">
-          <div class="control-heading">
-            <label for="fixedWait" id="fixedWaitLabel">Wait after first turn completed</label>
-            <output id="fixedWaitValue" for="fixedWait">3.0 s</output>
+          <div class="control-group" id="separationGroup">
+            <div class="control-heading">
+              <label for="separation">Spacing</label>
+              <output id="separationValue" for="separation">1.0 NM</output>
+            </div>
+            <input id="separation" type="range" min="0.5" max="5" step="0.1" value="1">
           </div>
-          <input id="fixedWait" type="range" min="0" max="20" step="0.5" value="3">
-        </div>
+        </details>
 
+        <details class="control-section" data-control-section="performance" open>
+          <summary>Aircraft / Performance</summary>
+
+          <div class="control-group">
+            <div class="control-heading">
+              <label for="speed">Contract speed</label>
+              <output id="speedValue" for="speed">420 kt</output>
+            </div>
+            <input id="speed" type="range" min="180" max="600" step="10" value="420">
+          </div>
+
+          <div class="control-group">
+            <div class="control-heading">
+              <label for="aircraft">Aircraft</label>
+              <output id="aircraftGValue" for="aircraft">4.5 G MIL</output>
+            </div>
+            <select id="aircraft">
+              <option value="f16Block20">F-16C</option>
+              <option value="fa18c" selected>F/A-18C</option>
+              <option value="f14b">F-14B</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <div class="control-heading">
+              <label for="turnLoadFactor">Sustained turn G</label>
+              <output id="turnLoadFactorValue" for="turnLoadFactor">4.5 G</output>
+            </div>
+            <input id="turnLoadFactor" type="range" min="2" max="7.5" step="0.1" value="4.5">
+          </div>
+        </details>
+
+        <details class="control-section" data-control-section="timing" open>
+          <summary>Timing</summary>
+
+          <div class="control-group" id="secondTurnGroup">
+            <div class="control-heading" id="secondTurnHeading">Second turn</div>
+            <div class="segmented mode" role="radiogroup" aria-label="Second turn trigger">
+              <label>
+                <input type="radio" name="mode" value="optimum" checked>
+                <span tabindex="0">Optimum</span>
+              </label>
+              <label>
+                <input type="radio" name="mode" value="cross">
+                <span tabindex="0">At crossing</span>
+              </label>
+              <label>
+                <input type="radio" name="mode" value="blindspot">
+                <span tabindex="0">At blindspot</span>
+              </label>
+              <label>
+                <input type="radio" name="mode" value="fixed">
+                <span tabindex="0">Fixed wait</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="control-group" id="fixedWaitGroup">
+            <div class="control-heading">
+              <label for="fixedWait" id="fixedWaitLabel">Wait after first turn completed</label>
+              <output id="fixedWaitValue" for="fixedWait">3.0 s</output>
+            </div>
+            <input id="fixedWait" type="range" min="0" max="20" step="0.5" value="3">
+          </div>
+        </details>
+
+        <details class="control-section mobile-display-section" data-control-section="display" open>
+          <summary>Display</summary>
+
+          <div class="control-group">
+            <div class="control-heading">
+              <label for="mobileBlindspotSize">Blindspot</label>
+              <output id="mobileBlindspotSizeValue" for="mobileBlindspotSize">30 deg</output>
+            </div>
+            <input id="mobileBlindspotSize" type="range" min="15" max="180" step="5" value="30">
+          </div>
+          <div class="control-group">
+            <label class="toggle-row" for="mobileShowBlindspots">
+              <span>Show blindspots</span>
+              <input id="mobileShowBlindspots" type="checkbox">
+            </label>
+          </div>
+        </details>
       </aside>
 
       <div class="stage" id="stage">
@@ -890,6 +1160,9 @@
       blindspotSize: document.getElementById("blindspotSize"),
       blindspotSizeValue: document.getElementById("blindspotSizeValue"),
       showBlindspots: document.getElementById("showBlindspots"),
+      mobileBlindspotSize: document.getElementById("mobileBlindspotSize"),
+      mobileBlindspotSizeValue: document.getElementById("mobileBlindspotSizeValue"),
+      mobileShowBlindspots: document.getElementById("mobileShowBlindspots"),
       a1LegendLabel: document.getElementById("a1LegendLabel"),
       a2LegendLabel: document.getElementById("a2LegendLabel"),
       elapsedLarge: document.getElementById("elapsedLarge"),
@@ -898,8 +1171,11 @@
       radiusSummary: document.getElementById("radiusSummary"),
       turnProfileSummary: document.getElementById("turnProfileSummary"),
       completionSpacingSummary: document.getElementById("completionSpacingSummary"),
-      playPause: document.getElementById("playPause")
+      playPause: document.getElementById("playPause"),
+      controlSections: Array.from(document.querySelectorAll(".control-section"))
     };
+
+    const compactControlsQuery = window.matchMedia("(max-width: 560px)");
 
     const ctx = elements.canvas.getContext("2d");
     let params = readParams();
@@ -2636,6 +2912,9 @@
       elements.turnLoadFactorValue.value = formatG(params.turnLoadFactor);
       elements.fixedWaitValue.value = formatSeconds(params.fixedWait);
       elements.blindspotSizeValue.value = formatDegrees(params.blindspotDeg);
+      elements.mobileBlindspotSize.value = String(params.blindspotDeg);
+      elements.mobileBlindspotSizeValue.value = formatDegrees(params.blindspotDeg);
+      elements.mobileShowBlindspots.checked = params.showBlindspots;
       elements.timeSlider.max = route.totalTime.toFixed(1);
       elements.timeSlider.value = elapsed.toFixed(1);
       elements.timeReadout.value = `${elapsed.toFixed(1)} / ${route.totalTime.toFixed(1)} s`;
@@ -2838,19 +3117,70 @@
       elapsed = clamp(elapsed, 0, route.totalTime);
       updateOutputs();
       draw();
-      resetPageScroll();
-    }
-
-    function resetPageScroll() {
-      if (typeof window.scrollTo === "function" && (window.scrollX !== 0 || window.scrollY !== 0)) {
-        window.scrollTo(0, 0);
-      }
     }
 
     function applyAircraftTurnPreset() {
       const aircraft = getAircraftProfile(elements.aircraft.value);
       elements.turnLoadFactor.max = aircraft.maxTurnG.toFixed(1);
       elements.turnLoadFactor.value = Math.min(aircraft.milSustainedG, aircraft.maxTurnG).toFixed(1);
+    }
+
+    function syncDisplayControlsFromPlot() {
+      elements.mobileBlindspotSize.value = elements.blindspotSize.value;
+      elements.mobileBlindspotSizeValue.value = formatDegrees(Number(elements.blindspotSize.value));
+      elements.mobileShowBlindspots.checked = elements.showBlindspots.checked;
+    }
+
+    function syncPlotDisplayControlsFromMobile() {
+      elements.blindspotSize.value = elements.mobileBlindspotSize.value;
+      elements.showBlindspots.checked = elements.mobileShowBlindspots.checked;
+    }
+
+    function updateControlSectionMode() {
+      if (!elements.controlSections.length) {
+        return;
+      }
+
+      if (!compactControlsQuery.matches) {
+        elements.controlSections.forEach((section) => {
+          section.open = true;
+        });
+        return;
+      }
+
+      const openSections = elements.controlSections.filter((section) => section.open);
+      if (!openSections.length) {
+        elements.controlSections[0].open = true;
+        return;
+      }
+
+      openSections.slice(1).forEach((section) => {
+        section.open = false;
+      });
+    }
+
+    function wireControlSections() {
+      elements.controlSections.forEach((section) => {
+        section.addEventListener("toggle", () => {
+          if (!section.open || !compactControlsQuery.matches) {
+            return;
+          }
+
+          elements.controlSections.forEach((other) => {
+            if (other !== section) {
+              other.open = false;
+            }
+          });
+        });
+      });
+
+      if (typeof compactControlsQuery.addEventListener === "function") {
+        compactControlsQuery.addEventListener("change", updateControlSectionMode);
+      } else if (typeof compactControlsQuery.addListener === "function") {
+        compactControlsQuery.addListener(updateControlSectionMode);
+      }
+
+      updateControlSectionMode();
     }
 
     function setRadioValue(name, value) {
@@ -2978,8 +3308,25 @@
         setElapsed(Number(elements.timeSlider.value));
       });
 
-      elements.blindspotSize.addEventListener("input", rebuild);
-      elements.showBlindspots.addEventListener("change", rebuild);
+      elements.blindspotSize.addEventListener("input", () => {
+        syncDisplayControlsFromPlot();
+        rebuild();
+      });
+
+      elements.showBlindspots.addEventListener("change", () => {
+        syncDisplayControlsFromPlot();
+        rebuild();
+      });
+
+      elements.mobileBlindspotSize.addEventListener("input", () => {
+        syncPlotDisplayControlsFromMobile();
+        rebuild();
+      });
+
+      elements.mobileShowBlindspots.addEventListener("change", () => {
+        syncPlotDisplayControlsFromMobile();
+        rebuild();
+      });
 
       elements.canvas.addEventListener("click", handleCanvasClick);
       elements.canvas.addEventListener("mousemove", handleCanvasMove);
@@ -3015,6 +3362,7 @@
       });
     }
 
+    wireControlSections();
     wireControls();
 
     if ("ResizeObserver" in window) {
