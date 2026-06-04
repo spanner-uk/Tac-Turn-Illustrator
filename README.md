@@ -1,6 +1,6 @@
 # TAC Turn Illustrator
 
-An interactive single-page tool for visualizing two-ship tactical turns, timing cues, spacing, turn radius, and blindspot exposure.
+An interactive React/Konva single-page tool for visualizing two-ship tactical turns, timing cues, spacing, turn radius, and blindspot exposure.
 
 ![TAC Turn Illustrator screenshot](assets/tac-turn-illustrator.png)
 
@@ -19,11 +19,33 @@ It is nicely illustrative how contract speed, separation and turn amount impacts
 
 ## Usage
 
-Open `index.html` in a browser.
+Install dependencies and start the Vite development server:
 
-No build step or server is required.
+```bash
+npm install
+npm run dev
+```
+
+Build the static production site:
+
+```bash
+npm run build
+```
+
+The production build is emitted to `dist/` and can be hosted as static files, including on GitHub Pages.
 
 Available here: https://spanner-uk.github.io/Tac-Turn-Illustrator/
+
+## Development
+
+The app is built with Vite, React, TypeScript, and react-konva/Konva. Maneuver generation lives in typed domain modules under `src/domain`, while the UI and diagram renderer live under `src/components`.
+
+Run the verification suite:
+
+```bash
+npm test
+npm run test:e2e
+```
 
 ## Notes
 
