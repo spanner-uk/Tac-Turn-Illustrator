@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Box, Container } from "@mui/material";
 import { Controls } from "./components/Controls";
 import { Diagram } from "./components/Diagram";
 import { Header } from "./components/Header";
@@ -88,10 +89,71 @@ export function App() {
   };
 
   return (
-    <main className="app">
+    <Container
+      component="main"
+      maxWidth={false}
+      sx={{
+        width: "min(1440px, 100%)",
+        height: "100dvh",
+        minHeight: 0,
+        py: 2.5,
+        display: "grid",
+        gridTemplateRows: "auto auto minmax(0, 1fr) auto",
+        gridTemplateAreas: `
+          "nav"
+          "topbar"
+          "workspace"
+          "scrubber"
+        `,
+        gap: 2,
+        overflow: "hidden",
+        "@media (max-width: 1024px)": {
+          height: "auto",
+          minHeight: "100dvh",
+          gridTemplateRows: "auto auto auto auto auto",
+          gridTemplateAreas: `
+            "nav"
+            "topbar"
+            "stage"
+            "scrubber"
+            "controls"
+          `,
+          overflow: "visible",
+          py: 1.5
+        },
+        "@media (max-width: 1024px) and (orientation: landscape)": {
+          height: "100dvh",
+          minHeight: 0,
+          gridTemplateColumns: "minmax(0, 1fr) minmax(280px, min(360px, 38vw))",
+          gridTemplateRows: "auto auto minmax(0, 1fr) auto",
+          gridTemplateAreas: `
+            "nav nav"
+            "topbar topbar"
+            "stage controls"
+            "scrubber controls"
+          `,
+          overflow: "hidden"
+        }
+      }}
+    >
       <ManeuverNav value={controls.maneuverType} onChange={handleManeuverChange} />
       <Header params={params} route={route} elapsed={elapsed} />
-      <section className="workspace">
+      <Box
+        component="section"
+        className="workspace"
+        sx={{
+          minHeight: 0,
+          gridArea: "workspace",
+          display: "grid",
+          gridTemplateColumns: "minmax(280px, 340px) minmax(0, 1fr)",
+          gridTemplateAreas: `"controls stage"`,
+          gap: 2,
+          overflow: "hidden",
+          "@media (max-width: 1024px)": {
+            display: "contents"
+          }
+        }}
+      >
         <Controls
           controls={controls}
           params={params}
@@ -110,7 +172,34 @@ export function App() {
             updateControls(next);
           }}
         />
-        <div className="stage" ref={stageRef} role="img" aria-label="Animated tactical turn plot">
+        <Box
+          className="stage"
+          ref={stageRef}
+          role="img"
+          aria-label="Animated tactical turn plot"
+          sx={{
+            position: "relative",
+            minWidth: 0,
+            minHeight: 0,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+            overflow: "hidden",
+            bgcolor: "background.paper",
+            gridArea: "stage",
+            "@media (max-width: 1024px)": {
+              order: 3,
+              height: "clamp(300px, 55dvh, 520px)",
+              minHeight: 300
+            },
+            "@media (max-width: 1024px) and (orientation: landscape)": {
+              gridArea: "stage",
+              order: 0,
+              height: "auto",
+              minHeight: 0
+            }
+          }}
+        >
           <Diagram
             controls={controls}
             params={params}
@@ -121,8 +210,8 @@ export function App() {
             onActiveTriggerChange={setActiveTrigger}
             onControlsChange={updateControls}
           />
-        </div>
-      </section>
+        </Box>
+      </Box>
       <Scrubber
         elapsed={elapsed}
         totalTime={route.totalTime}
@@ -133,6 +222,6 @@ export function App() {
         }}
         onPlayPause={handlePlayPause}
       />
-    </main>
+    </Container>
   );
 }

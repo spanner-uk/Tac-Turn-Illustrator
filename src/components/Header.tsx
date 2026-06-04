@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Box, Chip, IconButton, Paper, Popover, Stack, Typography } from "@mui/material";
 import { formatG, formatNm, formatSeconds } from "../domain/format";
 import { getManeuverInfo, getManeuverTitle } from "../domain/maneuverInfo";
 import type { ManeuverParams, Route } from "../domain/types";
@@ -10,83 +12,88 @@ interface HeaderProps {
 }
 
 export function Header({ params, route, elapsed }: HeaderProps) {
-  const [infoOpen, setInfoOpen] = useState(false);
-  const titleRowRef = useRef<HTMLDivElement | null>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const info = getManeuverInfo(params.maneuverType);
-
-  useEffect(() => {
-    if (!infoOpen) {
-      return;
-    }
-
-    const handleDocumentClick = (event: MouseEvent) => {
-      if (!titleRowRef.current?.contains(event.target as Node)) {
-        setInfoOpen(false);
-      }
-    };
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setInfoOpen(false);
-      }
-    };
-
-    document.addEventListener("click", handleDocumentClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("click", handleDocumentClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [infoOpen]);
+  const infoOpen = Boolean(anchorEl);
 
   return (
-    <header className="topbar">
-      <div className="headline">
-        <div className="title-row" ref={titleRowRef}>
-          <h1>{getManeuverTitle(params.maneuverType)}</h1>
-          <button
-            className="info-button"
-            type="button"
+    <Box
+      component="header"
+      sx={{
+        gridArea: "topbar",
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) auto",
+        alignItems: "end",
+        gap: 2,
+        "@media (max-width: 1024px)": {
+          order: 2,
+          gridTemplateColumns: "1fr",
+          alignItems: "stretch"
+        },
+        "@media (max-width: 1024px) and (orientation: landscape)": {
+          order: 0,
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          alignItems: "end"
+        }
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <Typography variant="h4" component="h1" sx={{ fontSize: "clamp(1.2rem, 2vw, 1.8rem)", lineHeight: 1.1 }}>
+            {getManeuverTitle(params.maneuverType)}
+          </Typography>
+          <IconButton
+            size="small"
             aria-label="Show maneuver information"
             aria-expanded={infoOpen}
-            aria-controls="maneuverInfo"
-            title="Maneuver information"
-            onClick={(event) => {
-              event.stopPropagation();
-              setInfoOpen((open) => !open);
-            }}
+            aria-controls={infoOpen ? "maneuverInfo" : undefined}
+            onClick={(event) => setAnchorEl(event.currentTarget)}
           >
-            i
-          </button>
-          {infoOpen && (
-            <div className="info-popover" id="maneuverInfo" role="tooltip" onClick={(event) => event.stopPropagation()}>
+            <InfoOutlinedIcon fontSize="small" />
+          </IconButton>
+          <Popover
+            id="maneuverInfo"
+            open={infoOpen}
+            anchorEl={anchorEl}
+            onClose={() => setAnchorEl(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+            transformOrigin={{ vertical: "top", horizontal: "left" }}
+          >
+            <Stack spacing={1} sx={{ maxWidth: 430, maxHeight: "58vh", overflow: "auto", p: 2 }}>
               {info.description.map((text) => (
-                <p key={text}>{text}</p>
+                <Typography variant="body2" key={text}>
+                  {text}
+                </Typography>
               ))}
               {info.pros.map((text) => (
-                <div className="info-item info-pro" key={`pro-${text}`}>
+                <Typography variant="body2" color="success.main" sx={{ fontWeight: 700 }} key={`pro-${text}`}>
                   + {text}
-                </div>
+                </Typography>
               ))}
               {info.cons.map((text) => (
-                <div className="info-item info-con" key={`con-${text}`}>
+                <Typography variant="body2" color="error.main" sx={{ fontWeight: 700 }} key={`con-${text}`}>
                   - {text}
-                </div>
+                </Typography>
               ))}
-            </div>
-          )}
-        </div>
-        <div className="meta" aria-live="polite">
-          <span className="pill">Turn time {route.maneuverEnd.toFixed(1)} s</span>
-          <span className="pill">Time in blindspot {formatSeconds(route.blindspotTime)}</span>
-          <span className="pill">Radius {route.radius.toFixed(2)} NM</span>
-          <span className="pill">Turn {formatG(params.turnLoadFactor)}</span>
-          <span className="pill">Spacing {formatNm(route.completionSpacing)}</span>
-        </div>
-      </div>
-      <div className="time-card" aria-live="polite">
-        <span>Elapsed</span>
-        <strong>{formatSeconds(elapsed)}</strong>
-      </div>
-    </header>
+            </Stack>
+          </Popover>
+        </Stack>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: "wrap" }} aria-live="polite">
+          <Chip label={`Turn time ${route.maneuverEnd.toFixed(1)} s`} size="small" variant="outlined" />
+          <Chip label={`Time in blindspot ${formatSeconds(route.blindspotTime)}`} size="small" variant="outlined" />
+          <Chip label={`Radius ${route.radius.toFixed(2)} NM`} size="small" variant="outlined" />
+          <Chip label={`Turn ${formatG(params.turnLoadFactor)}`} size="small" variant="outlined" />
+          <Chip label={`Spacing ${formatNm(route.completionSpacing)}`} size="small" variant="outlined" />
+        </Stack>
+      </Box>
+      <Paper variant="outlined" sx={{ minWidth: 172, p: 1.5, textAlign: { xs: "left", md: "right" } }} aria-live="polite">
+        <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 1 }}>
+          Elapsed
+        </Typography>
+        <Typography variant="h5" sx={{ fontVariantNumeric: "tabular-nums" }}>
+          {formatSeconds(elapsed)}
+        </Typography>
+      </Paper>
+    </Box>
   );
 }

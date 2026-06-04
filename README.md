@@ -38,7 +38,7 @@ Available here: https://spanner-uk.github.io/Tac-Turn-Illustrator/
 
 ## Development
 
-The app is built with Vite, React, TypeScript, and react-konva/Konva. Maneuver generation lives in typed domain modules under `src/domain`, while the UI and diagram renderer live under `src/components`.
+The app is built with Vite, React, TypeScript, MUI, and react-konva/Konva. Maneuver generation lives in typed domain modules under `src/domain`, while the UI and diagram renderer live under `src/components`.
 
 Run the verification suite:
 

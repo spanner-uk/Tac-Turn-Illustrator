@@ -1,10 +1,29 @@
-import type { SyntheticEvent } from "react";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  FormControl,
+  FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Slider,
+  Stack,
+  Switch,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
+import type { ReactNode } from "react";
 import { AIRCRAFT_PROFILES } from "../domain/constants";
 import { formatDegrees, formatG, formatNm, formatSeconds } from "../domain/format";
 import { getFixedWaitLabel, getSecondTurnHeading } from "../domain/maneuverInfo";
 import { needsDirectionControl, needsSecondTurnControl, needsTurnAngleControl } from "../domain/route";
 import type { AircraftKey, ControlsState, Direction, FirstStartMode, ManeuverParams, TimingMode } from "../domain/types";
-import { SegmentedControl } from "./SegmentedControl";
 
 interface ControlsProps {
   controls: ControlsState;
@@ -22,11 +41,7 @@ const directionOptions = [
 
 const firstStartOptions = [
   { value: "simultaneous", label: "Simultaneous" },
-  {
-    value: "outside-first",
-    label: "Outside first",
-    title: "Inside aircraft's first turn begins after outside aircraft completes first turn (wings level)"
-  }
+  { value: "outside-first", label: "Outside first" }
 ] as const;
 
 const timingOptions = [
@@ -36,243 +51,323 @@ const timingOptions = [
   { value: "fixed", label: "Fixed wait" }
 ] as const;
 
+function sliderValue(value: number | number[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export function Controls({ controls, params, compact, onChange, compactOpenSection, onCompactOpenSection }: ControlsProps) {
   const angleMin = params.maneuverType === "check" ? 1 : 20;
   const angleMax = params.maneuverType === "unassisted" || params.maneuverType === "turn90" || params.maneuverType === "check" ? 90 : 70;
   const fixed = needsSecondTurnControl(params.maneuverType) && params.mode === "fixed";
 
-  const sectionProps = (section: string) => ({
-    open: !compact || compactOpenSection === section,
-    onToggle: (event: SyntheticEvent<HTMLDetailsElement>) => {
-      if (event.currentTarget.open) {
-        onCompactOpenSection(section);
-      }
+  const expanded = (section: string) => !compact || compactOpenSection === section;
+  const onAccordionChange = (section: string) => (_: unknown, nextExpanded: boolean) => {
+    if (nextExpanded) {
+      onCompactOpenSection(section);
     }
-  });
+  };
 
   return (
-    <aside className="controls" aria-label="Maneuver controls">
-      <details className="control-section" data-control-section="maneuver" {...sectionProps("maneuver")}>
-        <summary>Maneuver</summary>
-
+    <Paper
+      component="aside"
+      variant="outlined"
+      aria-label="Maneuver controls"
+      sx={{
+        gridArea: "controls",
+        minWidth: 0,
+        alignSelf: "stretch",
+        overflow: "auto",
+        "@media (max-width: 1024px)": {
+          order: 5,
+          overflow: "visible"
+        },
+        "@media (max-width: 1024px) and (orientation: landscape)": {
+          order: 0,
+          minHeight: 0,
+          overflow: "auto"
+        }
+      }}
+    >
+      <Section title="Maneuver" expanded={expanded("maneuver")} onChange={onAccordionChange("maneuver")}>
         {needsTurnAngleControl(params.maneuverType) && (
-          <div className="control-group">
-            <div className="control-heading">
-              <label htmlFor="turnAngle">Turn angle</label>
-              <output htmlFor="turnAngle">{formatDegrees(params.angleDeg)}</output>
-            </div>
-            <input
-              id="turnAngle"
-              type="range"
-              min={angleMin}
-              max={angleMax}
-              step="1"
-              value={params.angleDeg}
-              onChange={(event) => onChange({ angleDeg: Number(event.target.value) })}
-            />
-          </div>
+          <ControlSlider
+            label="Turn angle"
+            valueLabel={formatDegrees(params.angleDeg)}
+            value={params.angleDeg}
+            min={angleMin}
+            max={angleMax}
+            step={1}
+            onChange={(value) => onChange({ angleDeg: value })}
+          />
         )}
 
         {needsDirectionControl(params.maneuverType) && (
-          <div className="control-group">
-            <div className="control-heading">Direction</div>
-            <SegmentedControl<Direction>
-              ariaLabel="Turn direction"
-              name="direction"
-              options={directionOptions}
+          <ControlGroup label="Direction">
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              size="small"
               value={controls.direction}
-              onChange={(direction) => onChange({ direction })}
-            />
-          </div>
+              aria-label="Turn direction"
+              onChange={(_, direction: Direction | null) => {
+                if (direction) {
+                  onChange({ direction });
+                }
+              }}
+            >
+              {directionOptions.map((option) => (
+                <ToggleButton key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </ControlGroup>
         )}
 
         {(params.maneuverType === "double" || params.maneuverType === "assisted") && (
-          <div className="control-group">
-            <div className="control-heading">First turn</div>
-            <SegmentedControl<FirstStartMode>
-              ariaLabel="First turn timing"
-              className="mode"
-              name="firstStart"
-              options={firstStartOptions}
+          <ControlGroup label="First turn">
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              orientation="vertical"
+              size="small"
               value={controls.firstStartMode}
-              onChange={(firstStartMode) => onChange({ firstStartMode })}
-            />
-          </div>
+              aria-label="First turn timing"
+              onChange={(_, firstStartMode: FirstStartMode | null) => {
+                if (firstStartMode) {
+                  onChange({ firstStartMode });
+                }
+              }}
+            >
+              {firstStartOptions.map((option) => (
+                <ToggleButton key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </ControlGroup>
         )}
 
         {(params.maneuverType === "double" || params.maneuverType === "assisted") && (
-          <div className="control-group">
-            <div className="control-heading">
-              <label htmlFor="overturn">Overturn</label>
-              <output htmlFor="overturn">{formatDegrees(params.overturnDeg)}</output>
-            </div>
-            <input
-              id="overturn"
-              type="range"
-              min="0"
-              max="45"
-              step="1"
+          <ControlGroup label="Overturn" valueLabel={formatDegrees(params.overturnDeg)}>
+            <Slider
+              aria-label="Overturn"
+              min={0}
+              max={45}
+              step={1}
               value={controls.lockOverturnToHalf ? params.overturnDeg : controls.overturnDeg}
               disabled={controls.lockOverturnToHalf}
-              onChange={(event) => onChange({ overturnDeg: Number(event.target.value) })}
+              onChange={(_, value) => onChange({ overturnDeg: sliderValue(value) })}
             />
-            <label className="toggle-row" htmlFor="overturnHalfAngle">
-              <span>Lock to 50% of turn angle</span>
-              <input
-                id="overturnHalfAngle"
-                type="checkbox"
-                checked={controls.lockOverturnToHalf}
-                onChange={(event) => onChange({ lockOverturnToHalf: event.target.checked })}
-              />
-            </label>
-          </div>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={controls.lockOverturnToHalf}
+                  onChange={(event) => onChange({ lockOverturnToHalf: event.target.checked })}
+                />
+              }
+              label="Lock to 50% of turn angle"
+            />
+          </ControlGroup>
         )}
 
-        <div className="control-group">
-          <div className="control-heading">
-            <label htmlFor="separation">Spacing</label>
-            <output htmlFor="separation">{formatNm(params.separation)}</output>
-          </div>
-          <input
-            id="separation"
-            type="range"
-            min="0.5"
-            max="5"
-            step="0.1"
-            value={controls.separation}
-            onChange={(event) => onChange({ separation: Number(event.target.value) })}
-          />
-        </div>
-      </details>
+        <ControlSlider
+          label="Spacing"
+          valueLabel={formatNm(params.separation)}
+          value={controls.separation}
+          min={0.5}
+          max={5}
+          step={0.1}
+          onChange={(value) => onChange({ separation: value })}
+        />
+      </Section>
 
-      <details className="control-section" data-control-section="performance" {...sectionProps("performance")}>
-        <summary>Aircraft / Performance</summary>
+      <Section title="Aircraft / Performance" expanded={expanded("performance")} onChange={onAccordionChange("performance")}>
+        <ControlSlider
+          label="Contract speed"
+          valueLabel={`${params.speedKts.toFixed(0)} kt`}
+          value={controls.speedKts}
+          min={180}
+          max={600}
+          step={10}
+          onChange={(value) => onChange({ speedKts: value })}
+        />
 
-        <div className="control-group">
-          <div className="control-heading">
-            <label htmlFor="speed">Contract speed</label>
-            <output htmlFor="speed">{params.speedKts.toFixed(0)} kt</output>
-          </div>
-          <input
-            id="speed"
-            type="range"
-            min="180"
-            max="600"
-            step="10"
-            value={controls.speedKts}
-            onChange={(event) => onChange({ speedKts: Number(event.target.value) })}
-          />
-        </div>
+        <ControlGroup label="Aircraft" valueLabel={`${formatG(params.aircraftMilSustainedG)} MIL`}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="aircraft-label">Aircraft</InputLabel>
+            <Select
+              labelId="aircraft-label"
+              label="Aircraft"
+              value={controls.aircraftKey}
+              onChange={(event: SelectChangeEvent) => {
+                const aircraftKey = event.target.value as AircraftKey;
+                const aircraft = AIRCRAFT_PROFILES[aircraftKey];
+                onChange({
+                  aircraftKey,
+                  turnLoadFactor: Math.min(aircraft.milSustainedG, aircraft.maxTurnG)
+                });
+              }}
+            >
+              {Object.entries(AIRCRAFT_PROFILES).map(([key, aircraft]) => (
+                <MenuItem key={key} value={key}>
+                  {aircraft.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </ControlGroup>
 
-        <div className="control-group">
-          <div className="control-heading">
-            <label htmlFor="aircraft">Aircraft</label>
-            <output htmlFor="aircraft">{formatG(params.aircraftMilSustainedG)} MIL</output>
-          </div>
-          <select
-            id="aircraft"
-            value={controls.aircraftKey}
-            onChange={(event) => {
-              const aircraftKey = event.target.value as AircraftKey;
-              const aircraft = AIRCRAFT_PROFILES[aircraftKey];
-              onChange({
-                aircraftKey,
-                turnLoadFactor: Math.min(aircraft.milSustainedG, aircraft.maxTurnG)
-              });
-            }}
-          >
-            {Object.entries(AIRCRAFT_PROFILES).map(([key, aircraft]) => (
-              <option key={key} value={key}>
-                {aircraft.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <ControlSlider
+          label="Sustained turn G"
+          valueLabel={formatG(params.turnLoadFactor)}
+          value={params.turnLoadFactor}
+          min={2}
+          max={params.aircraftMaxTurnG}
+          step={0.1}
+          onChange={(value) => onChange({ turnLoadFactor: value })}
+        />
+      </Section>
 
-        <div className="control-group">
-          <div className="control-heading">
-            <label htmlFor="turnLoadFactor">Sustained turn G</label>
-            <output htmlFor="turnLoadFactor">{formatG(params.turnLoadFactor)}</output>
-          </div>
-          <input
-            id="turnLoadFactor"
-            type="range"
-            min="2"
-            max={params.aircraftMaxTurnG}
-            step="0.1"
-            value={params.turnLoadFactor}
-            onChange={(event) => onChange({ turnLoadFactor: Number(event.target.value) })}
-          />
-        </div>
-      </details>
-
-      <details className="control-section" data-control-section="timing" {...sectionProps("timing")}>
-        <summary>Timing</summary>
-
+      <Section title="Timing" expanded={expanded("timing")} onChange={onAccordionChange("timing")}>
         {needsSecondTurnControl(params.maneuverType) && (
-          <div className="control-group">
-            <div className="control-heading">{getSecondTurnHeading(params)}</div>
-            <SegmentedControl<TimingMode>
-              ariaLabel="Second turn trigger"
-              className="mode"
-              name="mode"
-              options={timingOptions}
+          <ControlGroup label={getSecondTurnHeading(params)}>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              orientation="vertical"
+              size="small"
               value={controls.mode}
-              onChange={(mode) => onChange({ mode })}
-            />
-          </div>
+              aria-label="Second turn trigger"
+              onChange={(_, mode: TimingMode | null) => {
+                if (mode) {
+                  onChange({ mode });
+                }
+              }}
+            >
+              {timingOptions.map((option) => (
+                <ToggleButton key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </ControlGroup>
         )}
 
         {needsSecondTurnControl(params.maneuverType) && (
-          <div className={`control-group ${fixed ? "" : "disabled"}`.trim()}>
-            <div className="control-heading">
-              <label htmlFor="fixedWait">{getFixedWaitLabel(params)}</label>
-              <output htmlFor="fixedWait">{formatSeconds(params.fixedWait)}</output>
-            </div>
-            <input
-              id="fixedWait"
-              type="range"
-              min="0"
-              max="20"
-              step="0.5"
-              value={controls.fixedWait}
-              disabled={!fixed}
-              onChange={(event) => onChange({ fixedWait: Number(event.target.value) })}
-            />
-          </div>
-        )}
-      </details>
-
-      <details className="control-section mobile-display-section" data-control-section="display" {...sectionProps("display")}>
-        <summary>Display</summary>
-
-        <div className="control-group">
-          <div className="control-heading">
-            <label htmlFor="mobileBlindspotSize">Blindspot</label>
-            <output htmlFor="mobileBlindspotSize">{formatDegrees(params.blindspotDeg)}</output>
-          </div>
-          <input
-            id="mobileBlindspotSize"
-            type="range"
-            min="15"
-            max="180"
-            step="5"
-            value={controls.blindspotDeg}
-            onChange={(event) => onChange({ blindspotDeg: Number(event.target.value) })}
+          <ControlSlider
+            label={getFixedWaitLabel(params)}
+            valueLabel={formatSeconds(params.fixedWait)}
+            value={controls.fixedWait}
+            min={0}
+            max={20}
+            step={0.5}
+            disabled={!fixed}
+            onChange={(value) => onChange({ fixedWait: value })}
           />
-        </div>
-        <div className="control-group">
-          <label className="toggle-row" htmlFor="mobileShowBlindspots">
-            <span>Show blindspots</span>
-            <input
-              id="mobileShowBlindspots"
-              type="checkbox"
-              checked={controls.showBlindspots}
-              onChange={(event) => onChange({ showBlindspots: event.target.checked })}
-            />
-          </label>
-        </div>
-      </details>
-    </aside>
+        )}
+      </Section>
+
+      <Box sx={{ display: { xs: "block", lg: "none" } }}>
+        <Section title="Display" expanded={expanded("display")} onChange={onAccordionChange("display")}>
+          <ControlSlider
+            label="Blindspot"
+            valueLabel={formatDegrees(params.blindspotDeg)}
+            value={controls.blindspotDeg}
+            min={15}
+            max={180}
+            step={5}
+            onChange={(value) => onChange({ blindspotDeg: value })}
+          />
+          <FormControlLabel
+            control={<Switch checked={controls.showBlindspots} onChange={(event) => onChange({ showBlindspots: event.target.checked })} />}
+            label="Show blindspots"
+          />
+        </Section>
+      </Box>
+    </Paper>
+  );
+}
+
+function Section({
+  title,
+  expanded,
+  onChange,
+  children
+}: {
+  title: string;
+  expanded: boolean;
+  onChange(event: unknown, expanded: boolean): void;
+  children: ReactNode;
+}) {
+  return (
+    <Accordion disableGutters elevation={0} expanded={expanded} onChange={onChange}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Typography sx={{ fontWeight: 700 }}>{title}</Typography>
+      </AccordionSummary>
+      <AccordionDetails>
+        <Stack spacing={2}>{children}</Stack>
+      </AccordionDetails>
+    </Accordion>
+  );
+}
+
+function ControlGroup({
+  label,
+  valueLabel,
+  children
+}: {
+  label: string;
+  valueLabel?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Stack spacing={0.75}>
+      <Stack direction="row" sx={{ alignItems: "baseline", justifyContent: "space-between", gap: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+          {label}
+        </Typography>
+        {valueLabel && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+            {valueLabel}
+          </Typography>
+        )}
+      </Stack>
+      {children}
+    </Stack>
+  );
+}
+
+function ControlSlider({
+  label,
+  valueLabel,
+  value,
+  min,
+  max,
+  step,
+  disabled = false,
+  onChange
+}: {
+  label: string;
+  valueLabel: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  disabled?: boolean;
+  onChange(value: number): void;
+}) {
+  return (
+    <ControlGroup label={label} valueLabel={valueLabel}>
+      <Slider
+        aria-label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        disabled={disabled}
+        onChange={(_, nextValue) => onChange(sliderValue(nextValue))}
+      />
+    </ControlGroup>
   );
 }

@@ -1,4 +1,5 @@
 import type { KonvaEventObject } from "konva/lib/Node";
+import { Box, Chip, FormControlLabel, Paper, Slider, Stack, Switch, Typography } from "@mui/material";
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { AIRCRAFT_COLORS } from "../domain/constants";
 import { formatDegrees, formatNm } from "../domain/format";
@@ -68,42 +69,59 @@ export function Diagram({
           <Aircraft point={a2.point} heading={a2.heading} color={AIRCRAFT_COLORS.a2} label="A2" transform={transform} />
         </Layer>
       </Stage>
-      <div className="diagram-options">
-        <div className="diagram-range">
-          <div className="diagram-range-heading">
-            <label htmlFor="blindspotSize">Blindspot</label>
-            <output htmlFor="blindspotSize">{formatDegrees(params.blindspotDeg)}</output>
-          </div>
-          <input
-            id="blindspotSize"
-            type="range"
-            min="15"
-            max="180"
-            step="5"
+      <Paper
+        variant="outlined"
+        sx={{
+          position: "absolute",
+          top: 14,
+          right: 14,
+          zIndex: 5,
+          width: 210,
+          p: 1.25,
+          bgcolor: "rgba(255, 255, 255, 0.88)",
+          backdropFilter: "blur(8px)",
+          display: { xs: "none", lg: "block" }
+        }}
+      >
+        <Stack spacing={1}>
+          <Stack direction="row" sx={{ justifyContent: "space-between", gap: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              Blindspot
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+              {formatDegrees(params.blindspotDeg)}
+            </Typography>
+          </Stack>
+          <Slider
+            aria-label="Blindspot"
+            min={15}
+            max={180}
+            step={5}
             value={controls.blindspotDeg}
-            onChange={(event) => onControlsChange({ blindspotDeg: Number(event.target.value) })}
+            onChange={(_, value) => onControlsChange({ blindspotDeg: Array.isArray(value) ? value[0] : value })}
           />
-        </div>
-        <label className="diagram-toggle" htmlFor="showBlindspots">
-          <input
-            id="showBlindspots"
-            type="checkbox"
-            checked={controls.showBlindspots}
-            onChange={(event) => onControlsChange({ showBlindspots: event.target.checked })}
+          <FormControlLabel
+            control={<Switch checked={controls.showBlindspots} onChange={(event) => onControlsChange({ showBlindspots: event.target.checked })} />}
+            label="Show blindspots"
           />
-          <span>Show blindspots</span>
-        </label>
-      </div>
-      <div className="legend" aria-hidden="true">
-        <span className="legend-item">
-          <span className="swatch" />
-          <span>A1</span>
-        </span>
-        <span className="legend-item">
-          <span className="swatch" />
-          <span>A2</span>
-        </span>
-      </div>
+        </Stack>
+      </Paper>
+      <Stack direction="row" spacing={1} sx={{ position: "absolute", left: 14, top: 14, pointerEvents: "none" }} aria-hidden="true">
+        <Chip
+          variant="outlined"
+          size="small"
+          label="A1"
+          icon={<Box component="span" sx={{ display: "inline-block", width: 22, height: 4, bgcolor: "#d95f43", borderRadius: 10 }} />}
+          sx={{ bgcolor: "rgba(255, 255, 255, 0.82)" }}
+        />
+        <Chip
+          variant="outlined"
+          size="small"
+          label="A2"
+          icon={<Box component="span" sx={{ display: "inline-block", width: 22, height: 4, bgcolor: "#1f7a8c", borderRadius: 10 }} />}
+          sx={{ bgcolor: "rgba(255, 255, 255, 0.82)" }}
+        />
+      </Stack>
     </>
   );
 }

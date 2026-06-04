@@ -7,6 +7,21 @@ test("renders and updates the Konva diagram", async ({ page }) => {
   const canvas = page.locator("canvas").first();
   await expect(canvas).toBeVisible();
 
+  const stage = page.locator(".stage");
+  const controls = page.locator('[aria-label="Maneuver controls"]');
+  const stageBox = await stage.boundingBox();
+  expect(stageBox?.width ?? 0).toBeGreaterThan(280);
+  expect(stageBox?.height ?? 0).toBeGreaterThan(250);
+
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width > 1024) {
+    const controlsBox = await controls.boundingBox();
+    expect(stageBox?.width ?? 0).toBeGreaterThan(500);
+    expect(controlsBox).not.toBeNull();
+    expect(stageBox).not.toBeNull();
+    expect((stageBox?.x ?? 0) - ((controlsBox?.x ?? 0) + (controlsBox?.width ?? 0))).toBeGreaterThanOrEqual(8);
+  }
+
   const nonBlankPixels = await canvas.evaluate((node) => {
     const canvas = node as HTMLCanvasElement;
     const context = canvas.getContext("2d");
